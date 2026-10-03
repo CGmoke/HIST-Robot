@@ -12,7 +12,7 @@
 上半身关节驱动用 Gazebo 内置 JointTrajectoryController，不需要 ros2_control。
 底盘驱动用 Gazebo 内置 DiffDrive，不需要 ros2_control。
 
-导航（SLAM + Nav2）另行启动，见 greeting_nav.launch.py。
+导航（SLAM + Nav2）另行启动，见 tianyi_nav.launch.py。
 
 用法:
     ros2 launch tianyi25_sim gazebo.launch.py

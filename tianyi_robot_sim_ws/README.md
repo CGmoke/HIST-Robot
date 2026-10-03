@@ -164,9 +164,9 @@ ros2 launch tianyi25_sim tianyi_nav.launch.py rviz:=true    # 顺带开 RViz 看
 ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.15}}"
 ```
 
-> 命名说明：当前工作空间里该文件的真实名字是 **`tianyi_nav.launch.py`**。
-> 两个包的 README 与部分 docstring 里出现的 `greeting_nav.launch.py`、
-> `greeting_demo.launch.py` 是旧命名，在本工作空间中**不存在**。
+> 命名说明：导航入口的真实文件名是 **`tianyi_nav.launch.py`**，工作空间内引用已统一修正。
+> `greeting_demo.launch.py` 以及 `greeting_sim_stubs` / `greeting_orchestrator` /
+> `greeting_interfaces` 属于**外部的 greeting 工作空间**（`projects/greeting/greeting_ws`），本仓库不含。
 
 ---
 

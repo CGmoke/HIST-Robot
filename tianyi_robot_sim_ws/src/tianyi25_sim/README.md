@@ -12,9 +12,9 @@ ROS↔Gazebo 桥接、SLAM Toolbox + Nav2 导航栈，以及全部仿真启动�
 ```
 tianyi25_urdf（纯 URDF + STL）           ┌──────────────────┐
         │ xacro:include                  │  greeting_sim_stubs │
-        ▼                                │  greeting_orchestrator │  ← 运行时被本包 launch include
+        ▼                                │  greeting_orchestrator │  ← 外部 greeting 工作空间（本仓库不含）
 ┌───────────────────────┐  include       └──────────────────┘
-│     tianyi25_sim      │◄────────────── greeting_demo.launch.py
+│     tianyi25_sim      │◄────────────── greeting_demo.launch.py（外部）
 │  世界/模型/桥接/导航    │                （config 又被两个桩反过来读取）
 │  扫掠节点/odom TF 节点  │
 └───────────────────────┘
@@ -30,10 +30,11 @@ tianyi25_urdf（纯 URDF + STL）           ┌───────────
 | 运行依赖            | `robot_state_publisher`                                                                                 | 发布 `/robot_description` 与 TF                       |
 | 运行依赖            | `xacro`                                                                                                 | 展开 `tianyi25_gazebo.urdf.xacro`                    |
 | 运行依赖            | `rclpy`、`sensor_msgs`、`nav_msgs`、`geometry_msgs`、`tf2_ros`、`trajectory_msgs`、`std_srvs`、`rosgraph_msgs` | 各节点消息类型                                            |
-| 🔴 **运行时（未声明）** | `greeting_sim_stubs`、`greeting_orchestrator`                                                            | `greeting_demo.launch.py` include，但**故意不声明**以避包依赖环 |
+| 运行时（外部，未声明） | `greeting_sim_stubs`、`greeting_orchestrator`（均属 greeting 工作空间）                                                            | `greeting_demo.launch.py` include，但**故意不声明**以避包依赖环 |
 
-🔴 关于包依赖环：`greeting_sim_stubs` / `greeting_orchestrator` 运行时读本包 `config`，
-若本包再声明对它们的 `exec_depend` 会成环。缺失时报 "package not found"，按提示构建即可。
+🔴 关于包依赖环：`greeting_sim_stubs` / `greeting_orchestrator` 属于**外部的 greeting 工作空间**
+（`projects/greeting/greeting_ws`），运行时读本包 `config`；若本包再声明对它们的 `exec_depend` 会成环。
+它们不在本工作空间内，单独运行 `gazebo.launch.py` / `tianyi_nav.launch.py` 不依赖它们。
 
 ### 1.3 构建
 
@@ -59,8 +60,7 @@ tianyi25_sim/
 │   └── nav2_params.yaml            # Nav2 参数
 ├── launch/
 │   ├── gazebo.launch.py            # 世界+模型+桥接+扫掠+odom TF
-│   ├── greeting_nav.launch.py      # SLAM Toolbox + Nav2
-│   ├── greeting_demo.launch.py     # 一键拉起整条链路
+│   ├── tianyi_nav.launch.py        # SLAM Toolbox + Nav2
 │   └── display_motion.launch.py    # 纯 RViz 显示 + 关节扫掠
 ├── scripts/
 │   ├── gz_joint_sweep.py           # 向 gz 控制器周期下发正弦扫掠轨迹
@@ -255,11 +255,11 @@ ros2 launch tianyi25_sim gazebo.launch.py world:=empty.sdf spawn_z:=0.012
 
 🔴 `GZ_SIM_RESOURCE_PATH` 需含 `tianyi25_urdf` 的 share 父目录，否则网格/collision 加载失败（模型穿透地面）。
 
-### 6.2 `greeting_nav.launch.py` —— SLAM + Nav2
+### 6.2 `tianyi_nav.launch.py` —— SLAM + Nav2
 
 ```bash
-ros2 launch tianyi25_sim greeting_nav.launch.py
-ros2 launch tianyi25_sim greeting_nav.launch.py rviz:=true
+ros2 launch tianyi25_sim tianyi_nav.launch.py
+ros2 launch tianyi25_sim tianyi_nav.launch.py rviz:=true
 ```
 
 | launch 参数      | 默认      | 说明                                |
@@ -276,14 +276,18 @@ sudo apt install -y ros-jazzy-nav2-bringup ros-jazzy-nav2-msgs \
 
 `_require()` 在缺包时抛**可读错误**而非 traceback。
 
-### 6.3 `greeting_demo.launch.py` —— 一键全链路
+### 6.3 一键全链路（外部 greeting 工作空间）
+
+`greeting_demo.launch.py` **不在本工作空间**，它属于外部的 greeting 工作空间
+（`projects/greeting/greeting_ws`，与 `greeting_sim_stubs` / `greeting_orchestrator` /
+`greeting_interfaces` 同仓）。在那里运行时依次 include：
+`gazebo.launch.py` → `stubs.launch.py` → `orchestrator.launch.py` →（`nav:=true` 时）`tianyi_nav.launch.py`。
 
 ```bash
+# 以下命令在 greeting 工作空间中执行（非本仓库）
 ros2 launch tianyi25_sim greeting_demo.launch.py
 ros2 launch tianyi25_sim greeting_demo.launch.py nav:=true     # 需先装 Nav2
 ```
-
-依次 include：`gazebo.launch.py` → `stubs.launch.py` → `orchestrator.launch.py` →（`nav:=true` 时）`greeting_nav.launch.py`。
 
 拉起后触发接待：
 

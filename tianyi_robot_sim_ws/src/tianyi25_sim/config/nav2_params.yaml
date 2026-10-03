@@ -1,7 +1,7 @@
 ## Nav2 参数 —— 仿真侧天轶 2.5（差速轮式底盘 + 270° 前向 2D 雷达）
 ##
 ## 仅覆盖本项目实际用到的节点。配套启动：
-##     tianyi25_sim/launch/greeting_nav.launch.py
+##     tianyi25_sim/launch/tianyi_nav.launch.py
 ##         └─ slam_toolbox online_async_launch.py   （建图，发 map->odom 与 /map）
 ##         └─ nav2_bringup navigation_launch.py    （读本文件）
 ##

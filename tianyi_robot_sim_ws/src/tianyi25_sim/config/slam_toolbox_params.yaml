@@ -1,4 +1,4 @@
-## SLAM Toolbox 参数（在线异步建图）—— 仿真侧 greeting_nav.launch.py 使用
+## SLAM Toolbox 参数（在线异步建图）—— 仿真侧 tianyi_nav.launch.py 使用
 ##
 ## 定位选型：在线建图（mapping），不跑 AMCL / map_server。
 ## 本节点负责发布 TF 的 map -> odom 段，Nav2 全局代价地图静态层订阅它发布的 /map。

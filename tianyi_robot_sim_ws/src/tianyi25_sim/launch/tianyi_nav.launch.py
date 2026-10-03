@@ -15,9 +15,9 @@ Nav2 输出的 /cmd_vel 经 ros_gz_bridge 交给 gz DiffDrive 插件驱动底盘
 
 用法：
     # 已单独跑着 gazebo.launch.py 时，只补这一段：
-    ros2 launch tianyi25_sim greeting_nav.launch.py
+    ros2 launch tianyi25_sim tianyi_nav.launch.py
     # 看建图与路径：
-    ros2 launch tianyi25_sim greeting_nav.launch.py rviz:=true
+    ros2 launch tianyi25_sim tianyi_nav.launch.py rviz:=true
 
 前提（一次性）：
     sudo apt install -y ros-jazzy-nav2-bringup ros-jazzy-nav2-msgs \\
@@ -43,7 +43,7 @@ def _require(pkg: str, install_hint: str) -> Path:
         return Path(get_package_share_directory(pkg))
     except Exception as exc:  # PackageNotFoundError
         raise RuntimeError(
-            f"\n[greeting_nav] 找不到 ROS 包 '{pkg}'：{exc}\n"
+            f"\n[tianyi_nav] 找不到 ROS 包 '{pkg}'：{exc}\n"
             f"  请先安装（无需 sudo 以外的准备）：\n      {install_hint}\n"
             f"  装好后直接重跑本 launch，不需要重新 colcon build。\n"
         ) from exc
@@ -106,7 +106,7 @@ def generate_launch_description() -> LaunchDescription:
             ),
             LogInfo(
                 msg=(
-                    "greeting_nav: 启动 SLAM Toolbox（在线建图）+ Nav2 导航栈。\n"
+                    "tianyi_nav: 启动 SLAM Toolbox（在线建图）+ Nav2 导航栈。\n"
                     "  提示：机器人需要先「动一动」，SLAM 才能把 /map 建起来，"
                     "NavFn 也才能在已知栅格上规划路径。\n"
                     "  手动试走：ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "

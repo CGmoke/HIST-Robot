@@ -1,0 +1,335 @@
+## Nav2 参数 —— 仿真侧天轶 2.5（差速轮式底盘 + 270° 前向 2D 雷达）
+##
+## 仅覆盖本项目实际用到的节点。配套启动：
+##     tianyi25_sim/launch/greeting_nav.launch.py
+##         └─ slam_toolbox online_async_launch.py   （建图，发 map->odom 与 /map）
+##         └─ nav2_bringup navigation_launch.py    （读本文件）
+##
+## 【本文件不包含 amcl / map_server 段】：定位由 SLAM Toolbox 在线建图承担，
+## 不属于 navigation_launch.py 的节点集合；写上也会被忽略。
+##
+## TF 链（Nav2 依赖整条连通）：
+##     map ─slam_toolbox→ odom ─gz_odom_tf→ base_footprint ─robot_state_publisher→ 其余
+## 输出：/cmd_vel（geometry_msgs/Twist）→ ros_gz_bridge → gz DiffDrive 插件
+##
+## ── 机器人相关取值依据（改动底盘请同步此处）─────────────────────────────
+##   底盘包围盒 0.60 x 0.56 m，双臂展开后横向最宽约 0.9 m → robot_radius 取 0.45
+##   DiffDrive 上限 linear ±0.4 m/s、angular ±1.0 rad/s（见 tianyi25_gazebo.urdf.xacro）
+##   因此所有速度参数不得超过上述值，velocity_smoother 再兜一层
+## ────────────────────────────────────────────────────────────────────
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: true
+    global_frame: map
+    robot_base_frame: base_footprint
+    odom_topic: /odom
+    bt_loop_duration: 10
+    default_server_timeout: 20
+    # 故意不写 plugin_lib_names：该参数在 nav2_bt_navigator 里有内置默认全量列表，
+    # 显式抄一份反而会随 Jazzy 补丁版本变化而缺节点（表现为 BT 动作找不到节点类型）。
+    # 若需自定义行为树，再加 default_nav_to_pose_bt_xml / default_nav_through_poses_bt_xml。
+
+controller_server:
+  ros__parameters:
+    use_sim_time: true
+    controller_frequency: 15.0
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    progress_checker_plugin: progress_checker
+    goal_checker_plugins: [general_goal_checker]
+    controller_plugins: [FollowPath]
+
+    progress_checker:
+      plugin: nav2_controller::SimpleProgressChecker
+      required_movement_radius: 0.30
+      movement_time_allowance: 15.0
+
+    general_goal_checker:
+      plugin: nav2_controller::SimpleGoalChecker
+      stateful: true
+      xy_goal_tolerance: 0.15
+      yaw_goal_tolerance: 0.15
+
+    # 调节型纯追踪（RPP）：参数少、差速底盘上比 DWB 好调，先跑通再考虑换 DWB
+    FollowPath:
+      plugin: nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+      desired_linear_vel: 0.30            # 迎宾场景慢速；契约 §7.2 安全上限 0.3~0.5
+      lookahead_dist: 0.60
+      min_lookahead_dist: 0.35
+      max_lookahead_dist: 0.90
+      lookahead_time: 1.5
+      use_velocity_scaled_lookahead_dist: true
+      transform_tolerance: 0.2
+      use_rotate_to_heading: true
+      rotate_to_heading_min_angle: 0.785  # 航向误差 > 45° 时先原地转
+      rotate_to_heading_angular_vel: 0.60 # < DiffDrive 的 1.0 上限
+      max_angular_accel: 1.0
+      allow_reversing: false              # 270° 前向雷达，倒车没数据，禁用
+      use_regulated_linear_velocity_scaling: true
+      regulated_linear_scaling_min_radius: 0.90
+      regulated_linear_scaling_min_speed: 0.10
+      use_cost_regulated_linear_velocity_scaling: true
+      cost_scaling_dist: 0.50
+      cost_scaling_gain: 1.0
+      inflation_cost_scaling_factor: 3.0
+      min_approach_linear_velocity: 0.05
+      approach_velocity_scaling_dist: 0.50
+      max_robot_pose_search_dist: 10.0
+
+smoother_server:
+  ros__parameters:
+    use_sim_time: true
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: nav2_smoother::SimpleSmoother
+      tolerance: 1.0e-10
+      max_its: 1000
+      do_refinement: true
+
+planner_server:
+  ros__parameters:
+    use_sim_time: true
+    expected_planner_frequency: 5.0
+    planner_plugins: [GridBased]
+    GridBased:
+      # NavFn（Dijkstra）：结构简单、在已知栅格上稳定；需要更快可换 SmacPlanner2D
+      plugin: nav2_navfn_planner::NavfnPlanner
+      tolerance: 0.50
+      use_astar: false
+      allow_unknown: true               # SLAM 刚开始建图时大片 unknown，允许穿越
+
+behavior_server:
+  ros__parameters:
+    use_sim_time: true
+    # Jazzy 起改用 local_*/global_* 命名；旧名 costmap_topic/footprint_topic 已弃用。
+    # 两者的默认值与下面相同，即使某版本不认新名也不会跑偏。
+    local_costmap_topic: local_costmap/costmap_raw
+    local_footprint_topic: local_costmap/published_footprint
+    global_costmap_topic: global_costmap/costmap_raw
+    global_footprint_topic: global_costmap/published_footprint
+    cycle_frequency: 10.0
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "wait"]
+    spin:
+      plugin: nav2_behaviors::Spin
+    backup:
+      plugin: nav2_behaviors::BackUp
+    drive_on_heading:
+      plugin: nav2_behaviors::DriveOnHeading
+    wait:
+      plugin: nav2_behaviors::Wait
+    # Jazzy 1.3.13 behavior_server 用 local_frame/global_frame 一对：
+    #   局部行为（backup/drive_on_heading）在 odom 里算，全局行为（spin 到朝向）要 map
+    local_frame: odom
+    global_frame: map
+    robot_base_frame: base_footprint
+    transform_tolerance: 0.2
+    simulate_ahead_time: 2.0
+    max_rotational_vel: 0.60
+    min_rotational_vel: 0.20
+    rotational_acc_lim: 1.0
+
+waypoint_follower:
+  ros__parameters:
+    use_sim_time: true
+    loop_rate: 20
+    stop_on_failure: false
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: nav2_waypoint_follower::WaitAtWaypoint
+      enabled: true
+      waypoint_pause_duration: 200
+
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: true
+    smoothing_frequency: 20.0
+    scale_velocities: false
+    feedback: OPEN_LOOP
+    max_velocity: [0.40, 0.0, 1.00]     # 与 DiffDrive 上限一致，超了插件会截断
+    min_velocity: [-0.40, 0.0, -1.00]
+    max_accel: [0.50, 0.0, 1.00]
+    max_decel: [-0.50, 0.0, -1.00]
+    odom_topic: /odom
+    odom_duration: 0.1
+    # 注意：Jazzy 1.3.13 的 velocity_smoother 里【没有】enable_stamped_cmd_vel 参数
+    # （已用 strings 在 libnav2_velocity_smoother.so 中确认），写上会被当作未知参数忽略。
+    # 本仿真桥接的是 geometry_msgs/msg/Twist（见 gazebo.launch.py），保持默认即可。
+
+## Jazzy 的 navigation_launch.py 会【无条件】启动 collision_monitor 与 docking_server，
+## 且两者都进了 lifecycle_manager 的 node_names；任一个 configure 失败会导致整栈
+## "Failed to bring up all requested nodes. Aborting bringup." 所以必须给出参数段。
+## 迎宾场景本来也需要防撞（走廊/接待台前），这里的 approach 判据正好当安全层用。
+collision_monitor:
+  ros__parameters:
+    use_sim_time: true
+    base_frame_id: base_footprint
+    odom_frame_id: odom
+    # 速度链：controller/behavior → cmd_vel_nav → velocity_smoother → cmd_vel_smoothed
+    #         → collision_monitor → cmd_vel → ros_gz_bridge → gz DiffDrive
+    cmd_vel_in_topic: cmd_vel_smoothed
+    cmd_vel_out_topic: cmd_vel
+    state_topic: collision_monitor_state
+    transform_tolerance: 0.2
+    source_timeout: 1.0
+    base_shift_correction: true
+    stop_pub_timeout: 2.0
+    # 【为什么 polygons 为空 = 直通模式】
+    # 本机器人的 270° 雷达装在离地 5 cm 的前伸支架上，±123°~±135° 两个极端扇区
+    # 会打到本体自己的躯干角/垂臂，形成 49 个 0.30~0.31 m 的常驻回波。
+    # nav2_collision_monitor 的 Scan 源【没有距离/高度过滤参数】（PointCloud 源才有
+    # min_height/max_height），这些点又落在 robot_radius(0.45) 之内，于是任何
+    # approach/stop 多边形都会被永久命中 → 底盘被持续限速乃至刹停（实测 spin 行为
+    # 10 s 内转不到 1.57 rad 就被 time_allowance 打断）。
+    # 故这里把唯一的判据多边形 enabled 置 false，只保留节点做"速度链直通"
+    # （cmd_vel_smoothed → cmd_vel），把规避交给代价地图（已用 obstacle_min_range=0.40
+    # 滤掉自回波，避障逻辑正常）。
+    # 注意：不能写成 polygons: [] ——ROS 2 的 YAML 无法表达空数组，会抛
+    # InvalidParameterValueException: parameter_value_from failed ... No parameter value set。
+    # 要恢复这一层安全，三选一：
+    #   a) 把雷达前移到本体最宽处之外（lidar_x > 0.38 + 本体半宽 ≈ 0.65），使
+    #      270° 全扇区看不到本体；
+    #   b) 改用 gpu_lidar 的 PointCloud2 输出，当 PointCloud 源并设 min_height 抬到
+    #      手臂之上，用高度维滤掉本体自回波；
+    #   c) 用只覆盖正前方(|y|<0.18, x∈[0.5,1.2])的 stop 多边形，避开 ±123°~±135°
+    #      处本体角(|y|≈0.22~0.26)的回波——但礼仪动作挥臂时可能再度误触发。
+    polygons: ["FootprintApproach"]
+    FootprintApproach:
+      type: polygon
+      action_type: approach
+      footprint_topic: "/local_costmap/published_footprint"
+      time_before_collision: 1.2
+      simulation_time_step: 0.1
+      min_points: 6
+      visualize: false
+      enabled: false              # ← 关键：关掉判据，节点退化为直通
+    observation_sources: ["scan"]
+    scan:
+      type: scan
+      topic: scan
+      min_height: 0.15
+      max_height: 2.0
+      enabled: true
+
+## 本项目没有自动充电桩，但节点必须能 configure 成功，故按官方给一套"未使用"的配置。
+## 不加 dock 实例（docks 留空）→ 只会暴露 /docking_server 服务而不会有任何动作。
+docking_server:
+  ros__parameters:
+    use_sim_time: true
+    controller_frequency: 50.0
+    initial_perception_timeout: 5.0
+    wait_charge_timeout: 5.0
+    dock_approach_timeout: 30.0
+    undock_linear_tolerance: 0.05
+    undock_angular_tolerance: 0.1
+    max_retries: 3
+    base_frame: base_footprint
+    fixed_frame: odom
+    dock_backwards: false
+    dock_prestaging_tolerance: 0.5
+    dock_plugins: ["simple_charging_dock"]
+    simple_charging_dock:
+      plugin: opennav_docking::SimpleChargingDock
+      docking_threshold: 0.05
+      staging_x_offset: -0.7
+      use_external_detection_pose: false   # 仿真里没有 dock 检测话题，关掉免得起不来
+      use_battery_status: false
+      use_stall_detection: false
+      external_detection_timeout: 1.0
+      external_detection_translation_x: -0.18
+      external_detection_translation_y: 0.0
+      external_detection_rotation_roll: -1.57
+      external_detection_rotation_pitch: -1.57
+      external_detection_rotation_yaw: 0.0
+      filter_coef: 0.1
+    controller:
+      k_phi: 3.0
+      k_delta: 2.0
+      v_linear_min: 0.15
+      v_linear_max: 0.15
+      use_collision_detection: true
+      costmap_topic: local_costmap/costmap_raw
+      footprint_topic: local_costmap/published_footprint
+      transform_tolerance: 0.1
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      use_sim_time: true
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      global_frame: odom
+      robot_base_frame: base_footprint
+      rolling_window: true              # 局部图跟随机器人
+      width: 6                          # 注意：Nav2 里 width/height 声明为 int，写成 6.0 会抛
+      height: 6                         # InvalidParameterTypeException（controller_server 直接崩）
+      resolution: 0.05
+      robot_radius: 0.45
+      transform_tolerance: 0.3
+      plugins: ["obstacle_layer", "inflation_layer"]
+      obstacle_layer:
+        plugin: nav2_costmap_2d::ObstacleLayer
+        enabled: true
+        observation_sources: scan
+        scan:
+          topic: /scan
+          data_type: "LaserScan"
+          max_obstacle_height: 2.0
+          clearing: true
+          marking: true
+          raytrace_max_range: 8.0       # < 雷达量程 12 m，留余量避免外推
+          raytrace_min_range: 0.40   # 滤掉雷达本体自回波（gz 把 <min 的命中钳位到 min=0.30，
+          obstacle_max_range: 7.0  #  加噪声后是 0.30~0.31，故这里要 >0.31；详见 URDF 注释）
+          obstacle_min_range: 0.40
+          # 270° 前向雷达：正后方没有回波，消息里会是 inf。
+          # inf_is_valid=true 表示"inf 当作无遮挡"来清理该方向的历史障碍，必须开；
+          # 否则后方一旦被误标为障碍就永远擦不掉。
+          inf_is_valid: true
+      inflation_layer:
+        plugin: nav2_costmap_2d::InflationLayer
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.55
+      always_reset_initial_pose: false
+      track_unknown_space: false
+      publish_voxel_map: false
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: true
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_footprint
+      resolution: 0.05
+      robot_radius: 0.45
+      transform_tolerance: 0.3
+      track_unknown_space: true         # 未探索区域保持 unknown，NavFn 靠 allow_unknown 穿越
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      static_layer:
+        plugin: nav2_costmap_2d::StaticLayer
+        # SLAM Toolbox 的 /map 用 transient_local 发布，这里必须一起开，
+        # 否则晚启动的代价地图收不到"已经发布过"的地图（表现为全局图一直全 unknown）。
+        map_subscribe_transient_local: true
+      obstacle_layer:
+        plugin: nav2_costmap_2d::ObstacleLayer
+        enabled: true
+        observation_sources: scan
+        scan:
+          topic: /scan
+          data_type: "LaserScan"
+          max_obstacle_height: 2.0
+          clearing: true
+          marking: true
+          raytrace_max_range: 8.0
+          raytrace_min_range: 0.40   # 滤掉雷达本体自回波（gz 把 <min 的命中钳位到 min=0.30，
+          obstacle_max_range: 7.0  #  加噪声后是 0.30~0.31，故这里要 >0.31；详见 URDF 注释）
+          obstacle_min_range: 0.40
+          inf_is_valid: true
+      inflation_layer:
+        plugin: nav2_costmap_2d::InflationLayer
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.55
+      always_reset_initial_pose: false

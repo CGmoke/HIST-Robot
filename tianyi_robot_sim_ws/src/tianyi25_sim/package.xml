@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>tianyi25_sim</name>
+  <version>0.0.1</version>
+  <description>天轶 2.5 仿真启动、世界文件与控制器配置（仿真包，仿真器待定）</description>
+  <maintainer email="3059342114@qq.com">moke</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>tianyi25_urdf</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>trajectory_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>rosgraph_msgs</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+
+  <!-- ============================================================
+       仿真器：Gazebo Harmonic（gz-sim 8），随 ROS2 Jazzy 的 vendor 包提供，
+       由 ros_gz_* 桥接。关节驱动使用 gz 内置 JointTrajectoryController，
+       不依赖 ros2_control / gz_ros2_control。
+       注意：python3-yaml 供 launch 与 gz_joint_sweep 读取配置文件。
+       ============================================================ -->
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

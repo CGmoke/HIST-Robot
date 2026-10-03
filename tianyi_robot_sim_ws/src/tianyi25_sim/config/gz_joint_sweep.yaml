@@ -1,0 +1,104 @@
+## Gazebo 关节扫掠配置 —— xacro / launch / 控制节点共用此文件，避免关节名重复维护
+model_name: tianyi25
+# 与 worlds/greeting_world.sdf 里 <world name="..."> 一致（ros_gz_sim create -world 要用）
+world_name: greeting
+
+frequency: 0.15     # 正弦扫掠频率 (Hz)
+phase_step: 0.5     # 相邻关节相位差 (rad)，错开后运动更自然
+horizon: 1.0        # 每次下发的轨迹时长 (s)
+sample_dt: 0.05     # 轨迹采样间隔 (s)
+publish_period: 1.0 # 轨迹重发周期 (s)，取 = horizon 可避免覆盖上一条轨迹的告警
+
+# 关节名 -> [中心角 rad, 振幅 rad]
+# 振幅为 0 的关节只做位置保持：既补齐 TF 树，也避免重力下双臂下垂。
+# 所有中心值/振幅均落在 tianyi25_urdf.urdf 的 <limit> 范围内；腿部保持 0（迎宾安全约定）。
+joints:
+  first_leg_pitch_joint:  [0.0, 0.0]
+  second_leg_pitch_joint: [0.0, 0.0]
+  shoulder_yaw_l_joint:   [0.0, 0.0]
+  shoulder_yaw_r_joint:   [0.0, 0.0]
+  elbow_yaw_l_joint:      [0.0, 0.0]
+  elbow_yaw_r_joint:      [0.0, 0.0]
+  waist_pitch_joint:      [0.15, 0.15]
+  waist_yaw_joint:        [0.0, 0.35]
+  head_yaw_joint:         [0.0, 0.60]
+  head_pitch_joint:       [0.0, 0.30]
+  head_roll_joint:        [0.0, 0.25]
+  shoulder_pitch_l_joint: [0.0, 0.50]
+  shoulder_pitch_r_joint: [0.0, 0.50]
+  shoulder_roll_l_joint:  [0.45, 0.45]
+  shoulder_roll_r_joint:  [-0.45, 0.45]
+  elbow_pitch_l_joint:    [-0.75, 0.75]
+  elbow_pitch_r_joint:    [-0.75, 0.75]
+  wrist_pitch_l_joint:    [0.10, 0.35]
+  wrist_pitch_r_joint:    [0.10, 0.35]
+  # wrist_roll 常驻 0 位、不参与任何动作，排最后只为便于阅读（与插件能力无关：
+  # 实测启动日志逐行打印了全部 21 个关节的 Configured joint，此前"19 关节上限"
+  # 的猜测已被证伪）。
+  wrist_roll_l_joint:     [0.0, 0.0]
+  wrist_roll_r_joint:     [0.0, 0.0]
+
+# ══════════════════════════════════════════════════════════════════════
+# 上半身关节位置环整定 —— urdf/tianyi25_gazebo.urdf.xacro 读取本段
+# ══════════════════════════════════════════════════════════════════════
+# position_cmd_min/max 的语义 = 关节【力矩】饱和值 (Nm)，不是角速度：
+#   实测依据：该值设为 1.5 时，只有 <limit effort> ≤ 24 的关节能跟随轨迹
+#   （head/wrist/elbow_yaw 能动，shoulder_yaw 35 及以上的全部不动）。
+#   与 velocity 限值无关——effort=91、velocity=9.22（全场最大）的 shoulder_pitch
+#   照样不动，排除"速度限值"解释。改成 20 后 20/21 个关节恢复响应。
+# 取值 = 关节 <limit effort> × torque_ratio（留 20% 余量），逐关节不同，
+# 避免一脚踩死：轻载的头部（effort 6.3）给 20 会直接冲到机械限位。
+arm_control:
+  torque_ratio: 0.8
+  torque_default_nm: 6.0          # 未列出的关节兜底（与最小 effort 一致）
+  torque_limits_nm:
+    first_leg_pitch_joint:  178.0
+    second_leg_pitch_joint: 178.0
+    waist_pitch_joint:      178.0
+    waist_yaw_joint:        140.0
+    shoulder_pitch_l_joint:  91.0
+    shoulder_pitch_r_joint:  91.0
+    shoulder_roll_l_joint:   95.0
+    shoulder_roll_r_joint:   95.0
+    shoulder_yaw_l_joint:    35.0
+    shoulder_yaw_r_joint:    35.0
+    elbow_pitch_l_joint:     35.0
+    elbow_pitch_r_joint:     35.0
+    elbow_yaw_l_joint:       24.0
+    elbow_yaw_r_joint:       24.0
+    wrist_pitch_l_joint:      6.3
+    wrist_pitch_r_joint:      6.3
+    wrist_roll_l_joint:       6.3
+    wrist_roll_r_joint:       6.3
+    head_yaw_joint:           6.3
+    head_pitch_joint:         6.3
+    head_roll_joint:          6.3
+  # 增益必须比"够用"大得多：位置环的力矩被上面的饱和值截断，因此增益调大
+  # 不会让轻载关节过载，却能让重载关节更快跟上目标。
+  position_p_gain: 200.0
+  position_i_gain: 2.0
+  position_d_gain: 20.0
+  position_i_min: -1.0
+  position_i_max: 1.0
+
+# ══════════════════════════════════════════════════════════════════════
+# 腿柱锁止（把举躯干的两节压回 0 位）—— 同文件被 xacro 读成关节弹簧
+# ══════════════════════════════════════════════════════════════════════
+# 为什么必须加弹簧：
+#   first/second_leg_pitch 在 0 位是【倒立摆的不稳定平衡点】——躯干（约 62 kg）
+#   压在关节上方，重力力矩按 m·g·L ≈ 215 Nm/rad 随偏角线性增长；而位置环的
+#   比例力矩被 position_cmd_min/max 饱和（178×0.8 = 142 Nm），永远追不上，
+#   于是躯干必然塌到 second_leg_pitch 下限 -2.618（实测现象），且塌下去后
+#   靠控制器（最大 178 Nm）也拉不回来。
+# 弹簧为什么能解决：
+#   扭转弹簧刚度 K > 215 时，净力矩 = (K - 215)·θ 恒为恢复方向，
+#   0 位从"不稳定平衡"变成"稳定平衡"，无需控制器出力即可站稳。
+# 取值：K = 400（约 1.9 倍余量）。
+# 注意：这里【不配关节阻尼】。URDF 的 <gazebo reference="joint"><damping> 会被
+# Jazzy 的 URDF→SDF 转换器丢弃（它只认 <springStiffness>/<springReference>，
+# <damping> 会告警 "not defined in SDF" 后原样丢弃）。阻尼由位置环的 D 项承担：
+# position_d_gain = 20 Nm/(rad/s)，对这两节相当于 20 的阻尼系数。
+leg_lock:
+  # 关节名 -> 扭转弹簧刚度 (Nm/rad)
+  first_leg_pitch_joint:  400.0
+  second_leg_pitch_joint: 400.0

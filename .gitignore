@@ -1,0 +1,42 @@
+
+# --- Python 缓存 / 字节码 ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- 构建 / 安装 / 日志 ---
+build/
+install/
+log/
+
+# --- 环境变量 ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- 测试 / 覆盖率 ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- IDE / 编辑器 ---
+.vscode/
+.idea/
+*.swp
+*~
+
+# --- 数据 / 临时产物 ---
+*.tmp
+*/tmp/*
+*.bak
+*.jpg
+*.jpeg
+*.png
+*.npy
+pick_garbage/
+
+xarm_sim_stack_full/
+intelligent_interaction/

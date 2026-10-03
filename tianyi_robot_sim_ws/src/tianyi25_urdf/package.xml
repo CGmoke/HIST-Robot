@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>tianyi25_urdf</name>
+  <version>0.0.1</version>
+  <description>天轶 2.5 人形机器人 URDF 模型与 STL 网格资源（沿用厂商包名，保持 package://tianyi25_urdf/ 引用零改写）</description>
+  <maintainer email="3059342114@qq.com">moke</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- 运行时依赖：仅用于模型显示与关节状态发布。
+       使用 exec_depend 而非 depend，避免未安装时 CMake find_package 失败。 -->
+  <exec_depend>urdf</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

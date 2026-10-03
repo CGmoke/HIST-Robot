@@ -1,0 +1,83 @@
+## SLAM Toolbox 参数（在线异步建图）—— 仿真侧 greeting_nav.launch.py 使用
+##
+## 定位选型：在线建图（mapping），不跑 AMCL / map_server。
+## 本节点负责发布 TF 的 map -> odom 段，Nav2 全局代价地图静态层订阅它发布的 /map。
+##
+## 与仿真环境的对应关系：
+##   base_frame  = base_footprint（gz_odom_tf 把 /odom 转成 odom->base_footprint）
+##   odom_frame  = odom
+##   scan_topic  = /scan（gpu_lidar，gz_frame_id=lidar_link，270° 前向，量程 0.15~12 m）
+##
+## 🔴 270° 前向雷达的注意点：
+##   机器人正后方约 90° 无激光数据。SLAM Toolbox 不要求全向扫描，但原地连续旋转时
+##   后方特征会短暂缺失，因此 minimum_travel_heading 取得略大（0.2 rad ≈ 11°），
+##   避免在特征不足的小角度上做扫描匹配而引入抖动。
+
+slam_toolbox:
+  ros__parameters:
+    use_sim_time: true
+
+    # ---- 坐标系与输入 ----
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_footprint
+    scan_topic: /scan
+    mode: mapping                     # mapping = 在线建图；localization = 加载已有地图
+
+    # ---- 求解器（Ceres，Jazzy 默认配置）----
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
+    ceres_preconditioner: SCHUR_JACOBI
+    ceres_trust_strategy: LEVENBERG_MARQUARDT
+    ceres_dogleg_type: TRADITIONAL_DOGLEG
+    ceres_loss_function: None
+
+    # ---- 输出频率与地图 ----
+    debug_logging: false
+    throttle_scans: 1
+    transform_publish_period: 0.02    # map->odom 发布周期 50 Hz
+    map_update_interval: 2.0          # /map 刷新周期 (s)
+    resolution: 0.05                  # 5 cm/格，与 Nav2 costmap resolution 保持一致
+    max_laser_range: 12.0             # = 雷达 <range><max>，别写大，否则强行外推
+    minimum_time_interval: 0.2        # 两帧扫描最少间隔，10 Hz 雷达下等价降频到 5 Hz
+    transform_timeout: 0.2
+    tf_buffer_duration: 30.0
+    stack_size_to_use: 40000000       # 建图长时间运行需要较大栈
+    enable_interactive_mode: true     # 允许 RViz 里手动调位姿（调试用）
+
+    # ---- 扫描匹配 ----
+    use_scan_matching: true
+    use_scan_barycenter: true
+    minimum_travel_distance: 0.2      # 走了 0.2 m 才插入新节点
+    minimum_travel_heading: 0.2       # 转了 0.2 rad 才插入新节点（见文件头 270° 说明）
+    scan_buffer_size: 10
+    scan_buffer_maximum_scan_distance: 12.0
+    link_match_minimum_response_fine: 0.1
+    link_scan_maximum_distance: 1.5
+    loop_search_maximum_distance: 3.0
+
+    # ---- 回环检测 ----
+    do_loop_closing: true             # 迎宾路径会来回走，开回环消除累积漂移
+    loop_match_minimum_chain_size: 10
+    loop_match_maximum_variance_coarse: 3.0
+    loop_match_minimum_response_coarse: 0.35
+    loop_match_minimum_response_fine: 0.45
+
+    # ---- 相关搜索空间 ----
+    correlation_search_space_dimension: 0.5
+    correlation_search_space_resolution: 0.01
+    correlation_search_space_smear_deviation: 0.1
+
+    loop_search_space_dimension: 8.0
+    loop_search_space_resolution: 0.05
+    loop_search_space_smear_deviation: 0.03
+
+    # ---- 扫描匹配打分权重（沿用官方示例，室内小场景够用）----
+    distance_variance_penalty: 0.5
+    angle_variance_penalty: 1.0
+    fine_search_angle_offset: 0.00349
+    coarse_search_angle_offset: 0.349
+    coarse_angle_resolution: 0.0349
+    minimum_angle_penalty: 0.9
+    minimum_distance_penalty: 0.5
+    use_response_expansion: true

@@ -1,0 +1,238 @@
+<?xml version="1.0" ?>
+<!--
+  迎宾仿真世界：12m x 12m 房间 + 若干家具/立柱。
+
+  为什么不用 gz 自带的 empty.sdf：
+    empty.sdf 只有 physics / user-commands / scene-broadcaster / contact 四个系统，
+    【没有】Sensors 系统，因此 gpu_lidar 不会出数据。雷达必须靠本文件里的
+    gz-sim-sensors-system 才会被渲染。
+
+  为什么不能真的是空世界：
+    SLAM Toolbox 靠激光特征做扫描匹配，纯平面+太阳没有任何特征 → 建图会漂移/失败。
+    墙体和立柱同时充当 Nav2 的障碍物与代价地图边界。
+
+  坐标系：世界原点 (0,0,0) 在房间正中地面，机器人生成在原点附近。
+-->
+<sdf version="1.6">
+  <world name="greeting">
+
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact"/>
+
+    <!-- 雷达（gpu_lidar）必需；render_engine 用 ogre2 -->
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.7 0.8 0.9 1</background>
+      <grid>false</grid>
+    </scene>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 12 x 12 m 房间：四面墙，厚 0.2，高 2.0 -->
+    <model name="room">
+      <static>true</static>
+      <link name="walls">
+        <collision name="wall_n_collision">
+          <pose>0 6 1.0 0 0 0</pose>
+          <geometry><box><size>12.2 0.2 2.0</size></box></geometry>
+        </collision>
+        <visual name="wall_n_visual">
+          <pose>0 6 1.0 0 0 0</pose>
+          <geometry><box><size>12.2 0.2 2.0</size></box></geometry>
+          <material>
+            <ambient>0.9 0.9 0.85 1</ambient>
+            <diffuse>0.9 0.9 0.85 1</diffuse>
+          </material>
+        </visual>
+
+        <collision name="wall_s_collision">
+          <pose>0 -6 1.0 0 0 0</pose>
+          <geometry><box><size>12.2 0.2 2.0</size></box></geometry>
+        </collision>
+        <visual name="wall_s_visual">
+          <pose>0 -6 1.0 0 0 0</pose>
+          <geometry><box><size>12.2 0.2 2.0</size></box></geometry>
+          <material>
+            <ambient>0.9 0.9 0.85 1</ambient>
+            <diffuse>0.9 0.9 0.85 1</diffuse>
+          </material>
+        </visual>
+
+        <collision name="wall_e_collision">
+          <pose>6 0 1.0 0 0 0</pose>
+          <geometry><box><size>0.2 12.2 2.0</size></box></geometry>
+        </collision>
+        <visual name="wall_e_visual">
+          <pose>6 0 1.0 0 0 0</pose>
+          <geometry><box><size>0.2 12.2 2.0</size></box></geometry>
+          <material>
+            <ambient>0.9 0.9 0.85 1</ambient>
+            <diffuse>0.9 0.9 0.85 1</diffuse>
+          </material>
+        </visual>
+
+        <collision name="wall_w_collision">
+          <pose>-6 0 1.0 0 0 0</pose>
+          <geometry><box><size>0.2 12.2 2.0</size></box></geometry>
+        </collision>
+        <visual name="wall_w_visual">
+          <pose>-6 0 1.0 0 0 0</pose>
+          <geometry><box><size>0.2 12.2 2.0</size></box></geometry>
+          <material>
+            <ambient>0.9 0.9 0.85 1</ambient>
+            <diffuse>0.9 0.9 0.85 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 接待台（同时是导航目标点 desk 的参照物） -->
+    <model name="reception_desk">
+      <static>true</static>
+      <pose>3.0 0 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <pose>0 0 0.45 0 0 0</pose>
+          <geometry><box><size>2.0 0.7 0.9</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0.45 0 0 0</pose>
+          <geometry><box><size>2.0 0.7 0.9</size></box></geometry>
+          <material>
+            <ambient>0.45 0.3 0.2 1</ambient>
+            <diffuse>0.55 0.38 0.25 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 两根立柱：给 SLAM 提供侧向特征 -->
+    <model name="pillar_a">
+      <static>true</static>
+      <pose>-3.0 2.5 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <pose>0 0 1.0 0 0 0</pose>
+          <geometry><cylinder><radius>0.25</radius><length>2.0</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 1.0 0 0 0</pose>
+          <geometry><cylinder><radius>0.25</radius><length>2.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.6 0.6 0.65 1</ambient>
+            <diffuse>0.6 0.6 0.65 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="pillar_b">
+      <static>true</static>
+      <pose>-3.0 -2.5 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <pose>0 0 1.0 0 0 0</pose>
+          <geometry><cylinder><radius>0.25</radius><length>2.0</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 1.0 0 0 0</pose>
+          <geometry><cylinder><radius>0.25</radius><length>2.0</length></cylinder></geometry>
+          <material>
+            <ambient>0.6 0.6 0.65 1</ambient>
+            <diffuse>0.6 0.6 0.65 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 两个方形障碍物 -->
+    <model name="crate_a">
+      <static>true</static>
+      <pose>2.5 3.5 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <pose>0 0 0.35 0 0 0</pose>
+          <geometry><box><size>0.7 0.7 0.7</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0.35 0 0 0</pose>
+          <geometry><box><size>0.7 0.7 0.7</size></box></geometry>
+          <material>
+            <ambient>0.7 0.5 0.2 1</ambient>
+            <diffuse>0.8 0.6 0.25 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="crate_b">
+      <static>true</static>
+      <pose>-4.0 -3.5 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <pose>0 0 0.35 0 0 0</pose>
+          <geometry><box><size>0.7 0.7 0.7</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0.35 0 0 0</pose>
+          <geometry><box><size>0.7 0.7 0.7</size></box></geometry>
+          <material>
+            <ambient>0.7 0.5 0.2 1</ambient>
+            <diffuse>0.8 0.6 0.25 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

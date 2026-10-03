@@ -1,0 +1,275 @@
+<?xml version="1.0"?>
+<!--
+  天轶 2.5 Gazebo 物理仿真描述。
+
+  做法：include tianyi25_urdf 的纯 URDF（不改动其任何内容），只在本包追加
+  仿真专用内容。这样 RViz 动显用的纯 URDF 保持干净，仿真侧扩展集中在 sim 包。
+
+  追加内容：
+    1) 用机器人【自己的底盘 base】实现移动——base.STL 网格本身在四个角内置了
+       四个轮形（两轴 × 左右），但那只是静态网格，没有可旋转的轮关节。
+       本文件在与网格轮形【重合】的位置补 4 个 continuous 轮关节（碰撞圆柱，
+       无 visual——网格已经画出了轮子），构成 4WD skid-steer（滑差转向）底盘，
+       由 gz DiffDrive 驱动。
+       早期方案是在本体下面【外挂】一个差速平台（chassis_link + 两轮 + 两万向轮，
+       把整机抬高 0.25 m），现已按需求去除，整机直接坐在本体自带的四个轮子上。
+    2) 2D 雷达（gpu_lidar）—— Nav2 / SLAM Toolbox 的输入，立柱装在本体前甲板。
+    3) gz 插件：JointTrajectoryController（上半身关节）、JointStatePublisher、
+       DiffDrive（四轮驱动 + 里程计）、Sensors（雷达渲染，需写在 world 里）。
+
+  ── 两个关键的物理处理 ─────────────────────────────────────────────────
+  (a) 真实轮碰撞半径 = 0.072 m，比网格轮形（实测 r ≈ 0.069~0.070）【大 2 mm】。
+      于是真实轮先触地、承担全部支撑，焊死在 base 上的网格轮形离地 1.5~2 mm，
+      不会产生"一个转的真轮 + 一个不转的焊死轮在同一点接触地面"的退化接触
+      （ODE 对这种重合接触的法向力分配不稳定，可能把载荷都分给焊死轮，
+      表现为轮子空转、车不走）。
+  (b) base 链接整体摩擦覆写为 0（<gazebo reference="base"> 的 <mu1>/<mu2>，
+      gz 会把它作用到该 link 的所有 collision）。这样即便有任何 base 网格
+      （包括轮形）偶尔擦地，也只是无摩擦滑过，绝不增加行驶/转向阻力。
+      抓地力完全由 4 个真实轮链接（各自 mu=1.0）提供。
+  这是【仿真专用】的处理，不改动契约文档；实机仍按契约走 NavigateTo→REST :9090。
+-->
+<robot name="tianyi25_gazebo" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="cfg"
+                  value="${xacro.load_yaml('$(find tianyi25_sim)/config/gz_joint_sweep.yaml')}"/>
+
+  <!-- 纯运动学/动力学模型（含 inertial / collision / limit） -->
+  <xacro:include filename="$(find tianyi25_urdf)/urdf/tianyi25_urdf.urdf"/>
+
+  <!-- ==========================================================
+       四轮几何参数（单位 m）。
+       网格实测（base.STL，四个内置轮形）：
+         后轮轴 x ≈ -0.202，前轮轴 x ≈ +0.30；轮心平面 y ≈ ±0.22；
+         网格轮形 r ≈ 0.069~0.070，轴中心 z ≈ 0.06，网格轮底 ≈ -0.0105。
+       本文件取值与之重合，仅碰撞半径大 2 mm（见文件头说明 a）。
+       ========================================================== -->
+  <xacro:property name="wheel_radius"      value="0.072"/>
+  <xacro:property name="wheel_width"       value="0.08"/>
+  <xacro:property name="wheel_separation"  value="0.44"/>   <!-- 左右轮心平面距 = 2×0.22 -->
+  <xacro:property name="axle_z"            value="0.06"/>   <!-- 轮轴在 base 中的高度 -->
+  <xacro:property name="rear_axle_x"       value="-0.20"/>
+  <xacro:property name="front_axle_x"      value="0.30"/>
+  <xacro:property name="wheel_y"           value="0.22"/>
+  <!-- 真实轮底（相对 base_footprint）= axle_z - wheel_radius = 0.06 - 0.072 = -0.012；
+       生成高度取 0.012 让四轮落地（gazebo.launch.py 的 spawn_z）。
+       网格最低点 -0.0105 比真实轮底高 1.5 mm → 网格本体不触地。 -->
+
+  <!-- 雷达立柱：装在本体前甲板中心（x=0.20 在两轴之间、y=0） -->
+  <xacro:property name="lidar_x"           value="0.20"/>
+  <xacro:property name="lidar_z"           value="0.415"/>
+
+  <xacro:macro name="cylinder_inertia" params="m r l">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m*(3*r*r+l*l)/12}" ixy="0" ixz="0"
+               iyy="${m*(3*r*r+l*l)/12}" iyz="0"
+               izz="${m*r*r/2}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- [真实车轮] 与 base.STL 的内置轮形重合；只给 collision/inertial，不给 visual。
+       parent 直接是机器人自己的底盘 base。绕 Y 轴连续转动。 -->
+  <xacro:macro name="drive_wheel" params="prefix cx cy">
+    <link name="${prefix}_wheel_link">
+      <xacro:cylinder_inertia m="0.6" r="${wheel_radius}" l="${wheel_width}"/>
+      <collision>
+        <origin xyz="0 0 0" rpy="1.5707963267948966 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+    </link>
+    <!-- 摩擦不写在 <collision><surface> 里：Jazzy 的 URDF→SDF 转换器【不认】URDF 的
+         <surface> 块，会把 <friction><ode><mu> 整个丢掉。必须用 gz 的 <mu1>/<mu2>
+         扩展，它们会被正确写进 SDF 的 <surface><friction><ode>。 -->
+    <gazebo reference="${prefix}_wheel_link">
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+    </gazebo>
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <origin xyz="${cx} ${cy} ${axle_z}" rpy="0 0 0"/>
+      <parent link="base"/>
+      <child link="${prefix}_wheel_link"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- 前左/前右/后左/后右（y+ = left，与本体命名一致） -->
+  <xacro:drive_wheel prefix="front_l" cx="${front_axle_x}" cy="${wheel_y}"/>
+  <xacro:drive_wheel prefix="front_r" cx="${front_axle_x}" cy="${-wheel_y}"/>
+  <xacro:drive_wheel prefix="rear_l"  cx="${rear_axle_x}"  cy="${wheel_y}"/>
+  <xacro:drive_wheel prefix="rear_r"  cx="${rear_axle_x}"  cy="${-wheel_y}"/>
+
+  <!-- base 链接整体零摩擦：网格里焊死的四个轮形以及任何 base 碰撞擦地时都不产生
+       拖拽（抓地只靠上面 4 个真实轮链接）。用 gz <mu1>/<mu2> 扩展，作用于 base
+       的全部 collision。 -->
+  <gazebo reference="base">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
+
+  <!-- [2D 雷达] 前向 270°，直接安装在本体 base 的前甲板上（原方案有 0.34 m 高的
+       立柱 mast_link，但用户反馈"底盘中间怎么有一个突出的柱子"，故去除立柱，让
+       雷达直接贴在前甲板，既不外露又不会遮挡运动部件。
+       雷达自身高度 0.05，中心 z=0.22+0.025=0.245 与 base 上表面齐平。 -->
+  <link name="lidar_link">
+    <xacro:cylinder_inertia m="0.1" r="0.035" l="0.05"/>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.035" length="0.05"/></geometry>
+      <material name="lidar_black"><color rgba="0.1 0.1 0.12 1.0"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.035" length="0.05"/></geometry>
+    </collision>
+  </link>
+  <joint name="lidar_joint" type="fixed">
+    <origin xyz="${lidar_x} 0 0.245" rpy="0 0 0"/>
+    <parent link="base"/>
+    <child link="lidar_link"/>
+  </joint>
+
+  <!-- ==========================================================
+       上半身关节驱动：位置环整定。
+       所有数值来自 config/gz_joint_sweep.yaml 的 arm_control / leg_lock 段，
+       不在这里重复写死——那份 yaml 是仿真整定的唯一真源。
+
+       JointTrajectoryController 按元素【出现顺序】解析配置：<joint_name> 之后
+       紧跟该关节的 <initial_position> 与 PID 参数，因此必须逐关节交错展开——
+       若把 21 个 <joint_name> 连在一起、参数另放，解析会错位且增益取不到值，
+       表现为"收到轨迹但关节不出力"。（这条已被实测证实，保留。）
+
+       关于 position_cmd_min/max：语义是关节【力矩】饱和值 (Nm)，不是角速度。
+       实测：设为 1.5 时只有 effort ≤ 24 的关节能跟随轨迹；设为 20 时 20/21 恢复。
+       因此逐关节按 <limit effort> × torque_ratio 取值，轻载关节不会被过驱。
+       ========================================================== -->
+  <xacro:property name="arm" value="${cfg['arm_control']}"/>
+  <xacro:property name="leg_lock" value="${cfg['leg_lock']}"/>
+  <xacro:property name="torque_map" value="${arm['torque_limits_nm']}"/>
+
+  <xacro:macro name="joint_cfg_list" params="js">
+    <xacro:if value="${len(js) > 0}">
+      <joint_name>${js[0]}</joint_name>
+      <initial_position>0</initial_position>
+      <position_p_gain>${arm['position_p_gain']}</position_p_gain>
+      <position_i_gain>${arm['position_i_gain']}</position_i_gain>
+      <position_d_gain>${arm['position_d_gain']}</position_d_gain>
+      <position_i_min>${arm['position_i_min']}</position_i_min>
+      <position_i_max>${arm['position_i_max']}</position_i_max>
+      <position_cmd_min>${-arm['torque_ratio'] * torque_map.get(js[0], arm['torque_default_nm'])}</position_cmd_min>
+      <position_cmd_max>${arm['torque_ratio'] * torque_map.get(js[0], arm['torque_default_nm'])}</position_cmd_max>
+      <xacro:joint_cfg_list js="${js[1:]}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <gazebo>
+    <plugin filename="gz-sim-joint-trajectory-controller-system"
+            name="gz::sim::systems::JointTrajectoryController">
+      <xacro:joint_cfg_list js="${list(cfg['joints'].keys())}"/>
+    </plugin>
+  </gazebo>
+
+  <!-- ==========================================================
+       腿柱锁止弹簧。
+       first/second_leg_pitch 在 0 位是倒立摆的不稳定平衡点：躯干约 62 kg 压在
+       关节上方，重力力矩 ≈ 215 Nm/rad 随偏角线性增长；而位置环力矩被饱和在
+       142 Nm，追不上，躯干必然塌到 second_leg_pitch 下限 -2.618（实测现象），
+       塌下去后控制器（最大 178 Nm）也拉不回来。
+       加扭转弹簧后，净力矩 = (K - 215)·θ，K = 400 > 215 → 0 位变成稳定平衡，
+       不依赖控制器即可站稳。这两节在 motions.yaml / 扫掠配置里都恒为 0，不参与动作。
+
+       阻尼不加在这里：URDF 的 <damping> 会被 Jazzy 的 URDF→SDF 转换器丢弃
+       （实测告警 "XML Element[damping], child of element[joint], not defined in SDF"），
+       摆动衰减由位置环的 position_d_gain 承担。
+       ========================================================== -->
+  <xacro:macro name="joint_springs" params="names">
+    <xacro:if value="${len(names) > 0}">
+      <gazebo reference="${names[0]}">
+        <implicitSpringDamper>1</implicitSpringDamper>
+        <springStiffness>${leg_lock[names[0]]}</springStiffness>
+        <springReference>0</springReference>
+      </gazebo>
+      <xacro:joint_springs names="${names[1:]}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <xacro:joint_springs names="${list(leg_lock.keys())}"/>
+
+  <gazebo>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <topic>joint_states</topic>
+    </plugin>
+  </gazebo>
+
+  <!-- ==========================================================
+       四轮驱动 + 里程计（skid-steer）。
+       每侧列出两个轮关节：插件接受同侧多个 <left_joint>/<right_joint>，
+       按轮速平均换算里程计。skid 转向时四轮横向滑擦，需要足够的角加速度余量，
+       故角速度上限取 0.8、角加速度 0.8。
+       cmd_vel 话题固定为 /model/<模型名>/cmd_vel（插件无 topic 参数），
+       由 gazebo.launch.py 用 ROS 侧 remapping 把它变成 /cmd_vel。
+       tf_topic 保留默认但不桥接：odom→base_footprint 由 gz_odom_tf 节点
+       从 /odom 发布，这样 frame 名完全可控（gz 侧 TF 会带模型作用域前缀）。
+       ========================================================== -->
+  <gazebo>
+    <plugin filename="gz-sim-diff-drive-system"
+            name="gz::sim::systems::DiffDrive">
+      <left_joint>front_l_wheel_joint</left_joint>
+      <left_joint>rear_l_wheel_joint</left_joint>
+      <right_joint>front_r_wheel_joint</right_joint>
+      <right_joint>rear_r_wheel_joint</right_joint>
+      <wheel_separation>${wheel_separation}</wheel_separation>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+      <!-- 绝对话题名：不加作用域前缀，便于 ros_gz_bridge 直接对名 -->
+      <odom_topic>/odom</odom_topic>
+      <odom_publish_frequency>30</odom_publish_frequency>
+      <max_linear_velocity>0.4</max_linear_velocity>
+      <min_linear_velocity>-0.4</min_linear_velocity>
+      <max_angular_velocity>0.8</max_angular_velocity>
+      <min_angular_velocity>-0.8</min_angular_velocity>
+      <max_linear_acceleration>0.5</max_linear_acceleration>
+      <min_linear_acceleration>-0.5</min_linear_acceleration>
+      <max_angular_acceleration>0.8</max_angular_acceleration>
+      <min_angular_acceleration>-0.8</min_angular_acceleration>
+    </plugin>
+  </gazebo>
+
+  <gazebo reference="lidar_link">
+    <sensor name="lidar" type="gpu_lidar">
+      <topic>/scan</topic>
+      <!-- gz_frame_id 让消息里的 frame_id 直接是 lidar_link，
+           与 robot_state_publisher 发布的 TF 对上（否则 gz 会填带模型作用域的名字） -->
+      <gz_frame_id>lidar_link</gz_frame_id>
+      <update_rate>10</update_rate>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>540</samples>
+            <resolution>1</resolution>
+            <min_angle>-2.35619449</min_angle>
+            <max_angle>2.35619449</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.30</min>
+          <max>12.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </lidar>
+      <alwaysOn>true</alwaysOn>
+      <visualize>false</visualize>
+    </sensor>
+  </gazebo>
+
+  <!-- 注意：不要在 URDF 里用 <parent link="world"> 固定关节来"站住"整机。
+       实测（gz-sim 8.15）该写法会让模型被判为不可动，内部关节既不被控制器驱动、
+       也不受重力下垂，等于废掉物理仿真。整机站立由本体 base 下的四轮承担。 -->
+</robot>

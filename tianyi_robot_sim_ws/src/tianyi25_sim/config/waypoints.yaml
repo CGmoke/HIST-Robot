@@ -1,0 +1,21 @@
+## 迎宾导航点位表 —— 仿真侧 NavigateTo 桩服务端使用（config/waypoints.yaml）
+##
+## 说明：
+##   接口契约 §7.2 规定实机的 NavigateTo 走底盘 REST :9090，点位以现场实测标定为准。
+##   仿真里没有底盘 SDK，因此用本文件的 (x, y, yaw) 直接转成 Nav2 的 NavigateToPose 目标。
+##   🔴 本文件是【仿真专用】，点位与 worlds/greeting_world.sdf 的家具布置对应，
+##      不得当作实机点位使用。
+##
+## 坐标系：map（由 SLAM Toolbox 发布；建图起点即世界原点附近）
+## 房间布置参照 greeting_world.sdf：
+##   接待台 中心 (3.0, 0.0)，尺寸 2.0 x 0.7  → 占 x∈[2.0,4.0], y∈[-0.35,0.35]
+##   立柱A (-3.0, 2.5) r=0.25   立柱B (-3.0, -2.5) r=0.25
+##   箱子A (2.5, 3.5)           箱子B (-4.0, -3.5)
+frame_id: map
+
+waypoints:
+  standby:   {x:  0.0, y:  0.0, yaw:  0.00}   # 待机位（世界原点，生成点）
+  desk:      {x:  1.6, y:  0.0, yaw:  0.00}   # 接待台前，距台面 0.4 m
+  pillar_a:  {x: -2.2, y:  2.5, yaw:  1.57}   # 立柱A前
+  pillar_b:  {x: -2.2, y: -2.5, yaw: -1.57}   # 立柱B前
+  exit:      {x:  0.0, y: -4.5, yaw:  3.14}   # 送客方向

@@ -1,0 +1,157 @@
+## 礼仪动作关键帧表 —— 仿真侧 play_motion 桩使用（config/motions.yaml）
+##
+## 数据结构：
+##   home:      中立待机姿态（各关节角度 rad）。keyframe 里没写的关节一律取 home 值。
+##   motions:   动作名 -> {duration: 名义时长(s), keyframes: [{t(s), positions:{...}}]}
+##
+## play_motion 桩的行为（见 greeting_sim_stubs/play_motion_server.py）：
+##   1. 先把 gz_joint_sweep 的扫掠关掉（SetBool false），避免两条轨迹打架；
+##   2. 从 /joint_states 取当前关节角作为 t=0 的第一个轨迹点 → 起点平滑、不跳变；
+##   3. 展开 keyframes，末尾补一个 home 点收尾。keyframe 里：
+##        · 写了 positions  → 与 home 合并（没写的关节取 home 值）
+##        · 不写 positions  → 保持上一个 keyframe 的姿态（用于"停留"）
+##   4. 名义时长按 1/speed_scale 拉长（speed_scale ≤ 0.7，动作更柔和）；
+##   5. 播完再把扫掠打开。
+##
+## 🔴 安全约定（接口契约 §7.1）：腿部关节 first/second_leg_pitch 恒为 0，
+##    迎宾场景禁止任何腿部动作，本文件的 home 与全部关键帧都不动腿。
+## 🔴 所有角度均已核对 tianyi25_urdf.urdf 的 <limit>，不会触发关节限位。
+## 🔴 本文件是【仿真专用】的视觉演示姿态，不构成实机动作库。
+
+version: "1.0"
+
+# 中立待机姿态：与 gz_joint_sweep.yaml 的中心角一致，保证扫掠与动作衔接不跳变
+home:
+  first_leg_pitch_joint:   0.00   # 腿：恒 0，禁止动作
+  second_leg_pitch_joint:  0.00   # 腿：恒 0，禁止动作
+  shoulder_yaw_l_joint:    0.00
+  shoulder_yaw_r_joint:    0.00
+  elbow_yaw_l_joint:       0.00
+  elbow_yaw_r_joint:       0.00
+  waist_pitch_joint:       0.15
+  waist_yaw_joint:         0.00
+  head_yaw_joint:          0.00
+  head_pitch_joint:        0.00
+  head_roll_joint:         0.00
+  shoulder_pitch_l_joint:  0.00
+  shoulder_pitch_r_joint:  0.00
+  shoulder_roll_l_joint:   0.45
+  shoulder_roll_r_joint:  -0.45
+  elbow_pitch_l_joint:    -0.75
+  elbow_pitch_r_joint:    -0.75
+  wrist_pitch_l_joint:     0.10
+  wrist_pitch_r_joint:     0.10
+
+motions:
+
+  # 鞠躬敬礼：正身前倾 + 收臂，停留一拍再回中立
+  salute_bow:
+    duration: 2.4
+    keyframes:
+      - {t: 0.0, positions: {}}
+      - t: 0.8
+        positions:
+          waist_pitch_joint:      0.45
+          head_pitch_joint:      -0.22
+          shoulder_pitch_l_joint: -0.15
+          shoulder_pitch_r_joint: -0.15
+          shoulder_roll_l_joint:  0.30
+          shoulder_roll_r_joint: -0.30
+          elbow_pitch_l_joint:   -0.55
+          elbow_pitch_r_joint:   -0.55
+      - {t: 1.6}                    # 保持鞠躬姿态一拍
+      - t: 2.4
+        positions: {}
+
+  # 挥手致意：左臂举起左右摆三次
+  wave_official:
+    duration: 3.0
+    keyframes:
+      - {t: 0.0, positions: {}}
+      - t: 0.6
+        positions:
+          shoulder_pitch_l_joint: -0.90
+          shoulder_roll_l_joint:   1.30
+          elbow_pitch_l_joint:    -0.50
+          shoulder_yaw_l_joint:    0.30
+          head_yaw_joint:          0.25
+          head_pitch_joint:        0.12
+      - {t: 1.2, positions: {shoulder_yaw_l_joint: -0.45, elbow_yaw_l_joint:  0.30}}
+      - {t: 1.8, positions: {shoulder_yaw_l_joint:  0.45, elbow_yaw_l_joint: -0.30}}
+      - {t: 2.4, positions: {shoulder_yaw_l_joint: -0.35, elbow_yaw_l_joint:  0.25}}
+      - {t: 3.0, positions: {}}
+
+  # 右手指引：右臂前伸指向右侧，头/腰同向
+  point_right:
+    duration: 2.2
+    keyframes:
+      - {t: 0.0, positions: {}}
+      - t: 0.7
+        positions:
+          shoulder_pitch_r_joint:  0.85
+          shoulder_roll_r_joint:  -0.25
+          elbow_pitch_r_joint:    -0.20
+          wrist_pitch_r_joint:     0.30
+          head_yaw_joint:         -0.45
+          waist_yaw_joint:        -0.25
+      - {t: 1.5}                    # 保持指引姿态
+      - {t: 2.2, positions: {}}
+
+  # 左手指引：point_right 的镜像
+  point_left:
+    duration: 2.2
+    keyframes:
+      - {t: 0.0, positions: {}}
+      - t: 0.7
+        positions:
+          shoulder_pitch_l_joint:  0.85
+          shoulder_roll_l_joint:   0.25
+          elbow_pitch_l_joint:    -0.20
+          wrist_pitch_l_joint:     0.30
+          head_yaw_joint:          0.45
+          waist_yaw_joint:         0.25
+      - {t: 1.5}                    # 保持指引姿态
+      - {t: 2.2, positions: {}}
+
+  # 送别鞠躬：张开双臂 + 前倾，腰左右小幅摆动
+  farewell_bow:
+    duration: 2.8
+    keyframes:
+      - {t: 0.0, positions: {}}
+      - t: 0.7
+        positions:
+          waist_pitch_joint:       0.50
+          head_pitch_joint:       -0.20
+          shoulder_roll_l_joint:   0.95
+          shoulder_roll_r_joint:  -0.95
+          shoulder_pitch_l_joint: -0.35
+          shoulder_pitch_r_joint: -0.35
+      - {t: 1.6, positions: {waist_yaw_joint:  0.25}}
+      - {t: 2.2, positions: {waist_yaw_joint: -0.20}}
+      - {t: 2.8, positions: {}}
+
+  # 合影姿态：双臂外展、抬头看镜头、头部微侧
+  photo_pose:
+    duration: 2.6
+    keyframes:
+      - {t: 0.0, positions: {}}
+      - t: 0.8
+        positions:
+          shoulder_roll_l_joint:  1.10
+          shoulder_roll_r_joint: -1.10
+          elbow_pitch_l_joint:   -0.30
+          elbow_pitch_r_joint:   -0.30
+          head_pitch_joint:       0.10
+          waist_pitch_joint:      0.10
+      - {t: 1.8, positions: {head_roll_joint: 0.15, head_yaw_joint: 0.20}}
+      - {t: 2.6, positions: {}}
+
+  # 待机扫视：头与腰缓慢左右巡视，用于无人时的"待命"表现
+  idle_scan:
+    duration: 4.0
+    keyframes:
+      - {t: 0.0, positions: {}}
+      - {t: 1.0, positions: {head_yaw_joint:  0.60, head_pitch_joint: 0.10, waist_yaw_joint:  0.20}}
+      - {t: 2.0, positions: {head_yaw_joint: -0.60, waist_yaw_joint: -0.20}}
+      - {t: 3.0, positions: {head_yaw_joint:  0.00, waist_yaw_joint:  0.00}}
+      - {t: 4.0, positions: {}}

@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(tianyi25_urdf)
 
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 find_package(ament_cmake REQUIRED)
 
 # 资源目录整体安装到 share/${PROJECT_NAME}/ 下，供 URDF 中的 package:// 引用

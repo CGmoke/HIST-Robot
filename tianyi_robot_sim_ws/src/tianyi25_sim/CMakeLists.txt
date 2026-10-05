@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(tianyi25_sim)
 
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 find_package(ament_cmake REQUIRED)
 
 # 仿真资源整体安装到 share/${PROJECT_NAME}/ 下，供 launch 中的 get_package_share_directory 引用

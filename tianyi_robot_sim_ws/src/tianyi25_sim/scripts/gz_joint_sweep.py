@@ -5,8 +5,8 @@
     发布 trajectory_msgs/JointTrajectory 到 /model/<model_name>/joint_trajectory，
     gazebo.launch.py 里的 ros_gz_bridge 会把它桥接成 gz.msgs.JointTrajectory。
 
-关节表（中心角/振幅）、频率、相位差全部来自 config/gz_joint_sweep.yaml，
-本节点不做任何硬编码，改参数只需改 YAML。
+关节表（中心角/振幅）、频率、相位差全部来自 config_file 参数指定的整定档
+（默认 config/gz_joint_sweep.yaml），本节点不做任何硬编码，改参数只需改 YAML。
 
 启停服务:
     std_srvs/SetBool 到 /tianyi25_sim/set_sweep_enabled（名字由 enable_service 参数决定）。

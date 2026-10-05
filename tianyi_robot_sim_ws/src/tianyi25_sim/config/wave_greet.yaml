@@ -1,0 +1,127 @@
+## 挥手打招呼（右臂）—— 【自包含档】保持姿态 + shoulder_yaw_r 正弦摆动
+##
+## 用法:
+##     ros2 launch tianyi25_sim gazebo.launch.py sweep_config:=wave_greet.yaml
+##
+## 本文件是一份完整的仿真整定档，与 gz_joint_sweep.yaml 同构，并带上打招呼必需的
+## 另外两段：arm_control（位置环 PID + 逐关节力矩表）与 posture_lock（姿态锁止弹簧）。
+## gazebo.launch.py 把 sweep_config 同时传给 xacro 与扫掠节点，因此切到本文件即
+## 整体切换：动作、PID、弹簧、model_name / world_name 全部以本文件为准 ——
+## 只读这一个文件就能看懂并改完打招呼。
+##
+## 🔴 与 gz_joint_sweep.yaml 的关系：arm_control / posture_lock 是【有意复制】的
+##    （换取单文件可读性）。改机器人级整定（PID 增益、力矩表、弹簧刚度）时
+##    两份文件都要改，否则默认档与打招呼档会不一致。
+##
+## 与 gz_joint_sweep.yaml 的动作差异：
+##   除 shoulder_yaw_r_joint 外，所有关节振幅都是 0（只做位置保持），
+##   因此机器人会【整体停在下面这套姿态】上，只有右肩偏航来回摆动 = 挥手。
+##
+## 姿态来源：joint_state_publisher_gui 面板读数，
+##   右臂 shoulder_pitch_r=-0.401 / shoulder_roll_r=-0.020 / elbow_pitch_r=-2.369，
+##   其余关节（左臂、腰、头、腿）≈0。所有值均已核对 tianyi25_urdf.urdf 的
+##   <limit>：elbow_pitch_r 下限 -2.618，最紧的一处仍留 0.25 rad 余量。
+##
+## 🔴 打招呼【不弯腰】：waist_pitch_joint 命令恒 0。但仅写 0 并不够 —— 腰只靠位置环
+##    的 200 Nm/rad 压不住 105 Nm/rad 的重力刚度，躯干会自己漂到 0.26 rad（15°）
+##    前倾，看上去就是在鞠躬。真正让腰"站直"的是下面 posture_lock 段的
+##    waist_pitch_joint 弹簧（腿柱同理，见该段注释）。
+##
+## 腿柱恒 0：迎宾场景禁止腿部动作（接口契约 §7.1），与 gz_joint_sweep.yaml 一致。
+
+model_name: tianyi25
+world_name: greeting
+
+frequency: 0.8      # 挥手频率 (Hz)：约 0.8 次/秒，接近真人抬手招呼的节奏
+phase_step: 0.0     # 只有一个关节参与摆动，相位差无意义，固定 0
+horizon: 1.0        # 每次下发的轨迹时长 (s)
+sample_dt: 0.05     # 轨迹采样间隔 (s)
+publish_period: 1.0 # 轨迹重发周期 (s)，取 = horizon 以避免覆盖上一条轨迹的告警
+
+# 关节名 -> [中心角 rad, 振幅 rad]
+joints:
+  # 腿：恒 0，禁止动作
+  first_leg_pitch_joint:  [0.0, 0.0]
+  second_leg_pitch_joint: [0.0, 0.0]
+  # 腰 / 头：保持 0 位
+  waist_pitch_joint:      [0.0, 0.0]
+  waist_yaw_joint:        [0.0, 0.0]
+  head_yaw_joint:         [0.0, 0.0]
+  head_pitch_joint:       [0.0, 0.0]
+  head_roll_joint:        [0.0, 0.0]
+  # 右臂：保持面板姿态不动
+  shoulder_pitch_r_joint: [-0.401, 0.0]
+  shoulder_roll_r_joint:  [-0.020, 0.0]
+  elbow_pitch_r_joint:    [-2.369, 0.0]
+  elbow_yaw_r_joint:      [0.015, 0.0]
+  wrist_pitch_r_joint:    [-0.013, 0.0]
+  wrist_roll_r_joint:     [0.0, 0.0]
+  # 挥手关节：绕 -0.016 为中心 ±0.35 rad（±20°）摆动
+  # 振幅上限参考 <limit> ±2.967 与 effort 35 Nm（饱和值 28 Nm），余量充足
+  shoulder_yaw_r_joint:   [-0.016, 0.35]
+  # 左臂：保持 0 位
+  shoulder_pitch_l_joint: [0.016, 0.0]
+  shoulder_roll_l_joint:  [0.0, 0.0]
+  shoulder_yaw_l_joint:   [0.0, 0.0]
+  elbow_pitch_l_joint:    [-0.001, 0.0]
+  elbow_yaw_l_joint:      [0.0, 0.0]
+  wrist_pitch_l_joint:    [0.0, 0.0]
+  wrist_roll_l_joint:     [0.0, 0.0]
+
+# ══════════════════════════════════════════════════════════════════════
+# 上半身关节位置环整定 —— urdf/tianyi25_gazebo.urdf.xacro 读取本段
+# ══════════════════════════════════════════════════════════════════════
+# （与 gz_joint_sweep.yaml 同值；理由与实测依据见该文件同名段，此处不重复展开。）
+# position_cmd_min/max 的语义 = 关节【力矩】饱和值 (Nm)，不是角速度：
+#   实测依据：该值设为 1.5 时，只有 <limit effort> ≤ 24 的关节能跟随轨迹
+#   （head/wrist/elbow_yaw 能动，shoulder_yaw 35 及以上的全部不动）。
+# 取值 = 关节 <limit effort> × torque_ratio（留 20% 余量），逐关节不同，
+# 避免一脚踩死：轻载的头部（effort 6.3）给 20 会直接冲到机械限位。
+arm_control:
+  torque_ratio: 0.8
+  torque_default_nm: 6.0          # 未列出的关节兜底（与最小 effort 一致）
+  torque_limits_nm:
+    first_leg_pitch_joint:  178.0
+    second_leg_pitch_joint: 178.0
+    waist_pitch_joint:      178.0
+    waist_yaw_joint:        140.0
+    shoulder_pitch_l_joint:  91.0
+    shoulder_pitch_r_joint:  91.0
+    shoulder_roll_l_joint:   95.0
+    shoulder_roll_r_joint:   95.0
+    shoulder_yaw_l_joint:    35.0
+    shoulder_yaw_r_joint:    35.0
+    elbow_pitch_l_joint:     35.0
+    elbow_pitch_r_joint:     35.0
+    elbow_yaw_l_joint:       24.0
+    elbow_yaw_r_joint:       24.0
+    wrist_pitch_l_joint:      6.3
+    wrist_pitch_r_joint:      6.3
+    wrist_roll_l_joint:       6.3
+    wrist_roll_r_joint:       6.3
+    head_yaw_joint:           6.3
+    head_pitch_joint:         6.3
+    head_roll_joint:          6.3
+  # 增益必须比"够用"大得多：位置环的力矩被上面的饱和值截断，因此增益调大
+  # 不会让轻载关节过载，却能让重载关节更快跟上目标。
+  position_p_gain: 200.0
+  position_i_gain: 2.0
+  position_d_gain: 20.0
+  position_i_min: -1.0
+  position_i_max: 1.0
+
+# ══════════════════════════════════════════════════════════════════════
+# 姿态锁止（把腿柱两节与腰俯仰压回 0 位）—— xacro 读成关节扭转弹簧
+# ══════════════════════════════════════════════════════════════════════
+# 完整推导见 gz_joint_sweep.yaml 同名段，结论：这三节在 0 位是倒立摆的不稳定平衡点，
+# 只要 (K + position_p_gain=200) > K_g，方程就只剩 θ=0 一个解 → 0 位唯一稳定。
+# 实测反推 K_g：腿柱 ≈ 603、腰 ≈ 202 Nm/rad（旧配置下腿柱前倾 9.8°、腰 15.1°，
+# 合计 24.9°，就是"打招呼时在弯腰"）。
+#
+# 注意：【不配关节阻尼】。URDF 的 <gazebo reference="joint"><damping> 会被 Jazzy 的
+# URDF→SDF 转换器丢弃，阻尼由位置环的 position_d_gain = 20 Nm/(rad/s) 承担。
+posture_lock:
+  # 关节名 -> 扭转弹簧刚度 (Nm/rad)
+  first_leg_pitch_joint:  1200.0   # (1200+200)/603 = 2.3 倍余量，腿柱视为刚性
+  second_leg_pitch_joint:  400.0   # 实测本就稳在 0，不动
+  waist_pitch_joint:       400.0   # (400+200)/202 = 3.0 倍余量，腰立直不鞠躬

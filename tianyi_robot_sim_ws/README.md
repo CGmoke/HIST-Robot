@@ -116,12 +116,14 @@ ros2 launch tianyi25_sim display_motion.launch.py frequency:=0.4 use_rviz:=false
 ```bash
 ros2 launch tianyi25_sim gazebo.launch.py
 ros2 launch tianyi25_sim gazebo.launch.py world:=empty.sdf spawn_z:=0.012
+ros2 launch tianyi25_sim gazebo.launch.py sweep_config:=wave_greet.yaml
 ```
 
 | 参数 | 默认 | 说明 |
 | --- | --- | --- |
 | `world` | `worlds/greeting_world.sdf` | 世界文件 |
 | `spawn_z` | `0.012` | 生成高度 (m)，默认值等于四轮轮底深度，正好落地 |
+| `sweep_config` | `gz_joint_sweep.yaml` | `config/` 下的整定档文件名（只写文件名）。xacro 与扫掠节点都按它读取（档内自包含 joints/频率、arm_control、posture_lock、model/world）。默认全身自然摆动；`wave_greet.yaml` = 保持一个固定姿态、只摆右肩挥手 |
 
 拉起的节点：
 
@@ -172,7 +174,7 @@ ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.15}}"
 
 ## 5. 话题与 TF 链
 
-桥接话题（`[` = gz → ROS，`]` = ROS → gz），模型名取自 `config/gz_joint_sweep.yaml` 的
+桥接话题（`[` = gz → ROS，`]` = ROS → gz），模型名取自当前整定档（`config/<sweep_config>`）的
 `model_name`（默认 `tianyi25`）：
 
 | 话题 | 方向 | 说明 |
@@ -233,7 +235,7 @@ ros2 service call /tianyi25_sim/set_sweep_enabled std_srvs/srv/SetBool "{data: f
 | 雷达无数据 | 世界缺 Sensors 系统 | 用 `greeting_world.sdf`，不要用 `empty.sdf` |
 | 轮子空转但车不走 | 真实轮与网格内焊死轮同点接触退化 | 确认 `wheel_radius=0.072`、`base` 的 `mu=0` |
 | 关节收到轨迹不出力 | 控制器关节配置顺序错位 | 确认 `joint_cfg_list` 逐关节交错展开 |
-| 躯干塌倒 | 缺腿柱锁止弹簧 | 确认 `springStiffness=400` |
+| 躯干塌倒 / 打招呼时弯腰 | 缺姿态锁止弹簧（尤其腰俯仰） | 确认 `posture_lock` 中 first_leg=1200、waist=400 |
 | Nav2 起不来 | 缺 Nav2 / slam_toolbox 或参数段缺失 | 按 §2 安装；使用本包 `nav2_params.yaml` |
 | TF 树割裂 | 某可动关节缺 `/joint_states` | 用 `joint_sweep_demo` 补齐全关节 |
 | 停止仿真后仍有进程 | gz / bridge 节点未随 launch 退出 | 手动结束残留的 `gz sim server`、`parameter_bridge`、`gz_joint_sweep`、`gz_odom_tf` |
@@ -242,9 +244,10 @@ ros2 service call /tianyi25_sim/set_sweep_enabled std_srvs/srv/SetBool "{data: f
 
 ## 7. 关键约定
 
-- `tianyi25_sim/config/gz_joint_sweep.yaml` 是仿真整定的**唯一真源**
-  （`model_name`、`world_name`、扫掠频率、关节表、位置环整定、腿柱弹簧刚度）。
-  xacro / launch / 节点都读它，改参数只改这一处。
+- `tianyi25_sim/config/` 下由 `sweep_config` 选中的整定档是仿真整定的**唯一真源**
+  （`model_name`、`world_name`、扫掠频率、关节表、位置环整定、姿态锁止弹簧刚度）。
+  xacro / `gazebo.launch.py` / 扫掠节点都读它，改参数只改这一处；档与档之间的
+  `arm_control` / `posture_lock` 是复制的，改机器人级整定要同步两份。
 - `model_name` 必须与 `world_name` 和世界文件里的 `<world name="...">` 保持一致
   （默认 `tianyi25` / `greeting`）。
 - Nav2 的速度参数**不得超过** DiffDrive 上限：linear ±0.4 m/s、angular ±0.8 rad/s。

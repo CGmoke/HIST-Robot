@@ -53,7 +53,8 @@ tianyi25_sim/
 ├── worlds/
 │   └── greeting_world.sdf          # 12×12m 房间 + 家具 + Sensors 系统
 ├── config/
-│   ├── gz_joint_sweep.yaml         # 关节扫掠 + 上半身位置环整定 + 腿柱弹簧（唯一真源）
+│   ├── gz_joint_sweep.yaml         # 默认整定档：扫掠 + 位置环整定 + 姿态锁止弹簧（自包含）
+│   ├── wave_greet.yaml             # 打招呼整定档：同构自包含，保持姿态只摆右肩
 │   ├── motions.yaml                # 礼仪动作关键帧表
 │   ├── waypoints.yaml              # 迎宾点位表（仿真专用）
 │   ├── slam_toolbox_params.yaml    # SLAM Toolbox 在线建图参数
@@ -141,9 +142,13 @@ tianyi25_sim/
 
 > 🔴 Nav2 的速度参数**不得超过**这些上限（`velocity_smoother` 再兜一层）。
 
-**腿柱锁止弹簧**：`first/second_leg_pitch_joint` 加 K=400 Nm/rad 扭转弹簧
-（`<implicitSpringDamper>1` + `<springStiffness>`）。原因：0 位是倒立摆**不稳定平衡点**，
-重力力矩 ≈ 215 Nm/rad > 位置环饱和力矩 142 Nm，不加弹簧躯干必塌。K=400 > 215 → 0 位转为稳定平衡。
+**姿态锁止弹簧（`posture_lock`）**：`first_leg_pitch_joint` / `waist_pitch_joint` /
+`second_leg_pitch_joint` 加扭转弹簧（K = 1200 / 400 / 400 Nm/rad，`<implicitSpringDamper>1`
++ `<springStiffness>`）。原因：这三节在 0 位都是倒立摆**不稳定平衡点**，重力力矩按
+`K_g·sinθ` 增长；实测反推 `K_g`：腿柱 ≈ 603、腰 ≈ 202 Nm/rad，而位置环比例增益只有
+200 Nm/rad，`200·θ = K_g·sinθ` 在 0 之外还有第二个根 → 躯干自己漂过去。实测旧配置
+（腿柱 400、腰无弹簧）下腿柱前倾 9.8°、腰前倾 15.1°，合计 24.9° —— 就是"打招呼时在弯腰"。
+只要 `(K + 200) > K_g`，方程只剩 θ=0 一个解，0 位成为唯一稳定平衡。
 
 > 🔴 不要在 URDF 里用 `<parent link="world">` 固定关节"站住"整机 —— gz-sim 8.15 下模型会被判为不可动，
 > 内部关节既不驱动也不受重力。整机站立由四轮承担。
@@ -157,22 +162,29 @@ tianyi25_sim/
 - **系统插件**：Physics / UserCommands / SceneBroadcaster / Contact + 🔴 **Sensors（`render_engine=ogre2`）**。
 
 > 🔴 不用 `empty.sdf`：它没有 Sensors 系统，`gpu_lidar` 不出数据；纯空世界 SLAM 无特征会漂移。
-> 世界名 `greeting` 与 `gz_joint_sweep.yaml` 的 `world_name` 必须一致（`ros_gz_sim create -world`）。
+> 世界名 `greeting` 与当前整定档的 `world_name` 必须一致（`ros_gz_sim create -world`）。
 
 ***
 
 ## 5. 配置文件详解
 
-### 5.1 `config/gz_joint_sweep.yaml`（仿真整定**唯一真源**）
+### 5.1 `config/gz_joint_sweep.yaml`（默认整定档）/ `config/wave_greet.yaml`（打招呼档）
 
-被 xacro / launch / 扫掠节点 / play\_motion 桩**共用**，避免关节名重复维护。
+**每档自包含**：`sweep_config` 选中哪一档，xacro（经同名 xacro arg）、`gazebo.launch.py`
+与扫掠节点就读哪一档。换档即整体切换动作 / PID / 弹簧 / 模型名，改配置只改这一个文件。
 
 | 段             | 内容                                                    |
 | ------------- | ----------------------------------------------------- |
 | 顶层            | `model_name`、`world_name`、扫掠频率/相位/时长/采样/重发周期          |
 | `joints`      | 关节名 → `[中心角, 振幅]`；振幅 0 = 仅保持（补齐 TF 树、防垂臂）；腿部恒 0       |
 | `arm_control` | 上半身位置环整定：`torque_ratio`、逐关节 `torque_limits_nm`、PID 增益 |
-| `leg_lock`    | 腿柱扭转弹簧刚度（`first/second_leg_pitch_joint = 400`）        |
+| `posture_lock` | 姿态锁止扭转弹簧刚度：`first_leg_pitch = 1200`、`second_leg_pitch = 400`、`waist_pitch = 400`。**不加腰这一条就会"打招呼时弯腰"**（见下） |
+
+🔴 `wave_greet.yaml` 的 `arm_control` / `posture_lock` 是**有意复制**的（换取单文件可读性）：
+改机器人级整定（PID、力矩表、弹簧刚度）时两份档都要改，否则默认档与打招呼档会不一致。
+
+🔴 `model_name` / `world_name` 由 `gazebo.launch.py` 在 **launch 时**从选中的档读取
+（用 `OpaqueFunction` 解析 `sweep_config`，因为它是 `LaunchConfiguration`，建描述时还没有值）。
 
 🔴 `position_cmd_min/max` 语义是关节**力矩饱和值 (Nm)**，不是角速度；
 按 `<limit effort> × torque_ratio` 逐关节取值（轻载头部给 20 会冲限位）。
@@ -233,12 +245,14 @@ Ceres 求解器；发布 TF 的 `map→odom` 段与 `/map`。
 ```bash
 ros2 launch tianyi25_sim gazebo.launch.py
 ros2 launch tianyi25_sim gazebo.launch.py world:=empty.sdf spawn_z:=0.012
+ros2 launch tianyi25_sim gazebo.launch.py sweep_config:=wave_greet.yaml
 ```
 
 | launch 参数 | 默认                                | 说明                  |
 | --------- | --------------------------------- | ------------------- |
 | `world`   | `<pkg>/worlds/greeting_world.sdf` | 世界文件                |
 | `spawn_z` | `0.012`                           | 生成高度（= 四轮轮底深度，正好落地） |
+| `sweep_config` | `gz_joint_sweep.yaml`        | `config/` 下的整定档文件名（只写文件名）。xacro 与扫掠节点都按它读取（档内自包含 joints/频率、arm_control、posture_lock、model/world）。默认全身自然摆动；`wave_greet.yaml` = 保持固定姿态、只摆右肩挥手 |
 
 拉起节点：`gz sim`、`robot_state_publisher`、`ros_gz_sim create`、`ros_gz_bridge`、`gz_joint_sweep`、`gz_odom_tf`。
 
@@ -404,7 +418,7 @@ ros2 service call /tianyi25_sim/set_sweep_enabled std_srvs/srv/SetBool "{data: f
 | 雷达无数据                    | 世界缺 Sensors 系统                             | 用 `greeting_world.sdf`，非 `empty.sdf`     |
 | 轮子空转车不走                  | 真轮与焊死轮同点接触退化                               | 确认 `wheel_radius=0.072`、`base` mu=0      |
 | 关节收到轨迹不出力                | 控制器关节配置顺序错位                                | 检查 `joint_cfg_list` 交错展开                 |
-| 躯干塌倒                     | 缺腿柱弹簧                                      | 确认 `leg_stiffness`/`springStiffness=400` |
+| 躯干塌倒 / 打招呼时弯腰            | 缺姿态锁止弹簧（尤其腰俯仰）                             | 确认 `posture_lock`：first_leg=1200、waist=400，且 `springStiffness` 已进 SDF |
 | `graceful controller` 崩溃 | costmap `width/height` 写成浮点                | 必须整数（`6` 非 `6.0`）                        |
 | Nav2 起不来                 | 缺 `collision_monitor`/`docking_server` 参数段 | 用本包 `nav2_params.yaml`                   |
 | 底盘被持续刹停                  | collision\_monitor 多边形命中自回波                | 确认 `FootprintApproach.enabled: false`    |
@@ -414,7 +428,7 @@ ros2 service call /tianyi25_sim/set_sweep_enabled std_srvs/srv/SetBool "{data: f
 
 ## 10. 注意事项
 
-- 🔴 `gz_joint_sweep.yaml` 是仿真整定的**唯一真源**，xacro/launch/节点/桩均读它，改参数只改这一处。
+- 🔴 `sweep_config` 选中的那份整定档是**仿真整定的唯一真源**：xacro / `gazebo.launch.py` / 扫掠节点都读它，改参数只改这一个文件。档与档之间（如 `wave_greet.yaml` 对 `gz_joint_sweep.yaml`）的 `arm_control` / `posture_lock` 是复制的，改机器人级整定要同步两份。
 - 🔴 `JointTrajectoryController` 关节配置**必须逐关节交错**。
 - 🔴 URDF 的 `<surface><friction>`、`<joint><damping>` 都会被 Jazzy 转换器丢弃，需用 gz 扩展。
 - 🔴 停止仿真后可能残留 `gz sim server` / `parameter_bridge` / `gz_joint_sweep` / `gz_odom_tf` 进程，需手动终止。

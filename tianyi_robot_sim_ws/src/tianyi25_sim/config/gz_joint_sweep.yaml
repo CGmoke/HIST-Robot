@@ -1,4 +1,7 @@
-## Gazebo 关节扫掠配置 —— xacro / launch / 控制节点共用此文件，避免关节名重复维护
+## Gazebo 关节扫掠 / 整定【默认档】—— xacro、launch、扫掠节点读的是【同一份档】：
+##   gazebo.launch.py 的 sweep_config:=<文件名> 选中哪一档，三者就读哪一档
+##   （每档自包含 joints + arm_control + posture_lock + model_name/world_name）。
+##   本文件是默认档（全身自然摆动）；wave_greet.yaml 是同构的打招呼档。
 model_name: tianyi25
 # 与 worlds/greeting_world.sdf 里 <world name="..."> 一致（ros_gz_sim create -world 要用）
 world_name: greeting
@@ -82,23 +85,40 @@ arm_control:
   position_i_max: 1.0
 
 # ══════════════════════════════════════════════════════════════════════
-# 腿柱锁止（把举躯干的两节压回 0 位）—— 同文件被 xacro 读成关节弹簧
+# 姿态锁止（把腿柱两节与腰俯仰压回 0 位）—— 同文件被 xacro 读成关节弹簧
 # ══════════════════════════════════════════════════════════════════════
 # 为什么必须加弹簧：
-#   first/second_leg_pitch 在 0 位是【倒立摆的不稳定平衡点】——躯干（约 62 kg）
-#   压在关节上方，重力力矩按 m·g·L ≈ 215 Nm/rad 随偏角线性增长；而位置环的
-#   比例力矩被 position_cmd_min/max 饱和（178×0.8 = 142 Nm），永远追不上，
-#   于是躯干必然塌到 second_leg_pitch 下限 -2.618（实测现象），且塌下去后
-#   靠控制器（最大 178 Nm）也拉不回来。
+#   first/second_leg_pitch、waist_pitch 在 0 位都是【倒立摆的不稳定平衡点】——
+#   躯干压在关节上方，重力力矩按 K_g·sinθ 随偏角增长。位置环的比例增益只有
+#   position_p_gain = 200 Nm/rad，一旦 K_g 逼近它，θ=0 就不再是唯一解：
+#   方程 200·θ = K_g·sinθ 在 0 之外还有第二个根，躯干会自己漂过去。
 # 弹簧为什么能解决：
-#   扭转弹簧刚度 K > 215 时，净力矩 = (K - 215)·θ 恒为恢复方向，
-#   0 位从"不稳定平衡"变成"稳定平衡"，无需控制器出力即可站稳。
-# 取值：K = 400（约 1.9 倍余量）。
+#   关节弹簧刚度 K 与位置环叠加后，只要 (K + 200) > K_g，方程
+#   (K + 200)·θ = K_g·sinθ 就只剩 θ = 0 一个解 → 0 位变成【唯一稳定平衡】。
+#
+# K_g 由实测反推（K_g = 平衡点处的合力矩 / sinθ）：
+#   实测环境：用户会话 ros2 launch ... sweep_config:=wave_greet.yaml，
+#             读 /joint_states 得到 —— first_leg_pitch 0.1713 rad、
+#             waist_pitch 0.2627 rad、second_leg_pitch 0.0000 rad，
+#             即腿柱 + 腰合计前倾 24.9°，肉眼看就是"打招呼时在弯腰"。
+#   反推结果（旧配置：腿柱弹簧 400、腰无弹簧）：
+#     first_leg_pitch_joint  K_g ≈ (200+400)×0.1713 / sin(0.1713) ≈ 603 Nm/rad
+#     waist_pitch_joint      K_g ≈  200      ×0.2627 / sin(0.2627) ≈ 202 Nm/rad
+#     second_leg_pitch_joint 实测恒 0，K_g < 600，无需改动
+#   旧值 400 只有 (400+200)/603 = 1.0 倍余量（刚好卡在临界，所以仍前倾 9.8°），
+#   腰则【完全没有弹簧】—— 这才是弯腰的直接来源。
+# 新取值与余量：
+#   first_leg_pitch 1200 → (1200+200)/603 = 2.3 倍，腿柱视为刚性
+#   waist_pitch      400 → (400+200)/202  = 3.0 倍，腰立直、不鞠躬
+#   second_leg_pitch 400 → 实测本就稳在 0，不动
+#
 # 注意：这里【不配关节阻尼】。URDF 的 <gazebo reference="joint"><damping> 会被
 # Jazzy 的 URDF→SDF 转换器丢弃（它只认 <springStiffness>/<springReference>，
 # <damping> 会告警 "not defined in SDF" 后原样丢弃）。阻尼由位置环的 D 项承担：
-# position_d_gain = 20 Nm/(rad/s)，对这两节相当于 20 的阻尼系数。
-leg_lock:
+# position_d_gain = 20 Nm/(rad/s)。
+posture_lock:
   # 关节名 -> 扭转弹簧刚度 (Nm/rad)
-  first_leg_pitch_joint:  400.0
-  second_leg_pitch_joint: 400.0
+  first_leg_pitch_joint:  1200.0
+  second_leg_pitch_joint:  400.0
+  waist_pitch_joint:       400.0
+

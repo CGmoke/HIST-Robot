@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reusable_model"
+version = "0.1.0"
+description = "Reusable, self-contained building blocks extracted from the Hulk/Zev robot stacks."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.23"]
+
+[project.optional-dependencies]
+vision = ["opencv-python-headless>=4.5", "pyarrow>=10.0"]
+hardware = ["pyserial>=3.5", "minimalmodbus>=2.0"]
+yaml = ["PyYAML>=5.4"]
+test = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["reusable_model*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".."]
+addopts = "-q"

@@ -38,9 +38,6 @@ htmlcov/
 *.npy
 pick_garbage/
 
-xarm_sim_stack_full/
-intelligent_interaction/
-
 # --- Python 打包产物 / 本地配置（template_model 补充）---
 dist/
 *.egg-info/

@@ -1,50 +1,32 @@
 # NOTICE · 版权与来源声明
 
-本文件说明 RobotForge 仓库中**非原创内容**的来源与授权状态。Apache-2.0（见 [`LICENSE`](LICENSE)）
-**仅覆盖本仓库作者原创的代码与文档**，不覆盖下列第三方内容。
+## 1. 本仓库全部内容均为原创
 
-## 1. 天轶 2.5（Tianyi 2.5）机器人模型资源
+RobotForge 仓库当前公开的内容 —— 包括 `packages/reusable_model` 下的 Python 库、
+全部 README 与文档、CI 与社区配置 —— **均为本项目作者原创**，
+采用 [Apache License 2.0](LICENSE)，**不包含任何第三方资产**：
 
-`projects/tianyi25-sim/` 下的机器人模型描述（关节链、连杆长度、质量与惯性参数、
-关节限位等）源自**机器人厂商随设备/SDK 交付的 `tianyi25_urdf` 包**。
-该包的原始 3D 网格文件（25 个 STL，约 27 MB）**版权归厂商所有**，
-其许可条款未公开、亦未取得再分发授权。
+- ❌ 不含任何机器人厂商的 URDF / STL / CAD 模型文件
+- ❌ 不含任何公司的内部代码、配置或数据
+- ❌ 不含许可证不明的第三方代码、模型或数据集
 
-### 因此本仓库做了如下处理
+## 2. 关于机器人工程项目
 
-1. **不包含任何厂商网格文件。** 原始 STL 已从本仓库的当前版本与 Git 历史中移除。
-2. **几何表示改为自写的 URDF 图元。** 所有 `visual` / `collision` 使用标准的
-   `box` / `sphere` 图元，其尺寸由原网格的点云包围盒计算得出，位置与原网格一致。
-   生成工具见 [`projects/tianyi25-sim/tools/urdf_to_primitive.py`](projects/tianyi25-sim/tools/urdf_to_primitive.py)。
-3. **包名 `tianyi25_urdf` 沿用厂商命名**，仅为保持 `package://` 与 `xacro:include`
-   引用可用；本仓库对该名称不主张任何权利。"天轶" 为厂商的商品/商标名称。
+本仓库的机器人工程项目（仿真、导航、抓取等）**当前为内部项目，不在本公开仓库中**。
 
-### 如你是权利人
+原因是这类工程依赖机器人厂商随设备/SDK 交付的模型资产，其版权属于厂商、
+未取得再分发授权。为避免侵权风险，相关工程已整体移出公开仓库
+（**当前版本与 Git 历史均已移除**），在内部独立维护。
 
-如果你是天轶机器人的厂商或权利人，认为本仓库中仍有内容侵犯了你的权益，
-请通过仓库 [Issues](https://github.com/CGmoke/robot-forge/issues) 或仓库维护者邮箱联系，
-我们会在核实后**立即移除**相关内容。
+本仓库的 [`projects/`](projects/) 目录为将来**可公开**的项目预留，
+接入前需通过 [`docs/adding-a-project.md`](docs/adding-a-project.md) 中的知识产权自检。
 
-### 如果你已获得厂商授权
-
-可按下述方式恢复高精度模型（详见
-[`tianyi25_urdf/README.md` §4.4](projects/tianyi25-sim/ros2_ws/src/tianyi25_urdf/README.md)）：
-
-```bash
-cp -a <厂商提供的 meshes 目录> projects/tianyi25-sim/ros2_ws/src/tianyi25_urdf/meshes
-```
-
-⚠️ 恢复后**不要**提交进公开仓库，除非你持有可再分发的书面授权；`meshes/` 已在
-`.gitignore` 中被忽略以防误提交。
-
-## 2. 第三方软件依赖
+## 3. 第三方软件依赖
 
 本项目使用但不包含以下第三方软件，它们各自遵循其自身许可：
 
 | 依赖 | 许可 |
 | --- | --- |
-| ROS 2 (Jazzy Jalisco) | Apache-2.0 |
-| Gazebo / gz-sim | Apache-2.0 |
 | NumPy | BSD-3-Clause |
 | PyYAML | MIT |
 | pytest | MIT |
@@ -53,8 +35,9 @@ cp -a <厂商提供的 meshes 目录> projects/tianyi25-sim/ros2_ws/src/tianyi25
 | pyserial（可选） | BSD-3-Clause |
 | minimalmodbus（可选） | Apache-2.0 |
 
-## 3. 本仓库原创内容
+ROS 2、Gazebo 等项目曾在开发过程中使用，但本仓库不含其代码，也不依赖它们构建。
 
-除上述内容外，本仓库的代码与文档（包括仿真世界、控制器与导航配置、rclpy 节点、
-整定参数、`packages/reusable_model` 下的 Python 库、以及全部 README）均为
-本项目作者原创，采用 [Apache License 2.0](LICENSE)。
+## 4. 如果你认为本仓库侵犯了你的权益
+
+请通过仓库 [Issues](https://github.com/CGmoke/robot-forge/issues) 或仓库维护者邮箱联系，
+我们会在核实后**立即处理**。

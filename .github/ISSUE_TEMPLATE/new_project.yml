@@ -75,5 +75,7 @@ body:
       options:
         - label: 我已阅读 docs/adding-a-project.md 的接入自检清单
           required: true
+        - label: 我已通过「知识产权自检」——项目内不含厂商交付的模型/网格，或已持有可再分发的书面授权
+          required: true
         - label: 我可以在干净环境里复现这个项目的运行步骤
           required: true

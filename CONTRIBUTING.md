@@ -27,14 +27,22 @@ git checkout -b feat/add-xxx
 cd packages/reusable_model && python -m pytest -q && cd ../..
 ```
 
-ROS 2 项目的验证：
+ROS 2 项目的验证（仅当 `projects/` 下存在公开项目时）：在该项目 README 给出的
+工作空间内 `colcon build` 并按其说明启动、验证。
 
-```bash
-cd projects/tianyi25-sim/ros2_ws
-colcon build --packages-select tianyi25_urdf tianyi25_sim --symlink-install
-source install/setup.bash
-ros2 launch tianyi25_sim gazebo.launch.py     # 确认能起来、/scan 与 /odom 有数据
-```
+## ⚠️ 提交前必过的知识产权自检
+
+这是本仓库的**硬性门槛**，不通过的内容一律不接受：
+
+- ❌ **不得**提交机器人厂商交付的模型资产（URDF / STL / CAD / 网格文件）
+- ❌ **不得**提交从厂商 SDK、厂商网盘、竞品仓库拷出的任何文件
+- ❌ **不得**提交许可证不明的代码、模型或数据集
+- ✅ 提交第三方内容时，必须同时说明**来源**与**许可协议**，且许可需与 Apache-2.0 兼容
+- ✅ 由第三方数据推导出的文件（例如按包围盒生成的几何），请在 PR 里说明推导方式
+
+你写的代码属于你（或你的单位）。**不确定某份文件能不能提交，就在 issue 里先问**，
+不要先传再说。背景见 [`NOTICE`](NOTICE) —— 本仓库因为这条原则，把一个已经做完、
+构建验证通过的完整仿真项目整体移出了公开仓库。
 
 ## 提交信息规范
 
@@ -59,7 +67,8 @@ PR 模板会自动带上这份清单，请逐条确认：
 - [ ] 新功能带测试，修 bug 带回归测试
 - [ ] 文档已同步（受影响的 README 都改了）
 - [ ] 没有提交绝对路径、私有数据、密钥、`build/` `install/` `log/` 等产物
-- [ ] 涉及新项目时，根 `README.md` 的项目索引表和 `CHANGELOG.md` 已更新
+- [ ] 本地测试通过（`cd packages/reusable_model && python -m pytest`）
+- [ ] 已通过上面的**知识产权自检**
 
 ## 代码规范
 
@@ -70,11 +79,13 @@ PR 模板会自动带上这份清单，请逐条确认：
 - 不写绝对路径、不读环境变量、不依赖任何具体项目的配置 —— `packages/` 下的代码必须与项目解耦
 - 公开 API 写 `参数 / 返回 / 异常` 格式的 docstring，并尽量附可执行 doctest
 
-### ROS 2
+### ROS 2（适用于 `projects/` 下的项目）
 
 - `package.xml` 依赖完整且用 `exec_depend`（避免未安装时 CMake `find_package` 失败）
 - launch 参数一律给默认值并写进 README 的参数表
 - 每个功能包一个 `README.md`：定位、依赖、构建、运行、话题/TF、排错
+- 🔴 `install(DIRECTORY ...)` 里列出的目录必须真实存在 —— 引用不存在的目录会让
+  `colcon build` 在安装阶段失败（本项目踩过两次：`models/` 与 `meshes/`）
 
 ### 文档
 

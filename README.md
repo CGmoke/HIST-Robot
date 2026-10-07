@@ -23,7 +23,11 @@ RobotForge 是一个面向机器人软件开发的 **monorepo 骨架 + 可复用
 | 目录 | 放什么 | 当前状态 |
 | --- | --- | --- |
 | [`packages/`](packages/) | 跨项目复用的库，与具体机器人无关 | ✅ **公开内容都在这里** —— 见下文 |
-| [`projects/`](projects/) | 具体的机器人工程项目（仿真 / 导航 / 抓取） | ⚠️ 当前为内部项目，见 [原因](#-为什么-projects-是空的) |
+| [`projects/`](projects/) | 具体的机器人工程项目（仿真 / 导航 / 抓取） | ⚠️ **目录里当前只有约定说明**，没有工程内容；那些工程在内部仓库维护，不在本仓库 |
+
+> 📖 **`projects/` 是公开可见的目录**，和仓库里其它文件一样。GitHub 没有「某个目录只有我能看」
+> 这种设置 —— 仓库设为 public，里面的每一个文件对所有人都可见。所以**不要把任何
+> 不想公开的内容放进本仓库**，哪怕只放一会儿：一旦推送，历史与 PR 引用里都可能留下痕迹。
 
 三条设计原则：
 
@@ -102,11 +106,15 @@ robot-forge/
 **约定**：`projects/` 放"某个机器人的完整工程"，`packages/` 放"谁都能用的库"。
 `projects/` 之间**不允许**互相依赖；公共部分一律下沉到 `packages/`。
 
-## ❓ 为什么 `projects/` 是空的
+## ❓ 为什么 `projects/` 里没有东西
 
-本仓库的机器人工程项目（仿真、导航、抓取）**依赖机器人厂商随设备交付的模型资产**
-（URDF、STL 网格），其版权属于厂商、未取得再分发授权。为避免侵权风险，
-这些工程已连**当前版本与 Git 历史**一起移出公开仓库，在内部独立维护。
+**先澄清一点**：`projects/` 这个目录本身是**公开可见**的 —— 任何人都能浏览、下载里面的文件。
+它现在只有一个 `README.md`（说明目录约定），并没有被隐藏。
+
+没有工程内容的原因是：本仓库的机器人工程项目（仿真、导航、抓取）**依赖机器人厂商
+随设备交付的模型资产**（URDF、STL 网格），其版权属于厂商、未取得再分发授权。
+为避免侵权风险，这些工程已连**当前版本与 Git 历史**一起移出公开仓库，
+改在**内部独立仓库**维护 —— 这才是"内部"的含义：工程在别处，不是目录被隐藏。
 
 本项目选择**不把厂商的模型文件传上来再说**。如果你在别处见过同类项目公开分发厂商模型，
 那是他们的选择，不代表这里也会这么做。
@@ -163,12 +171,17 @@ project-agnostic building blocks you can drop into your own stack.
 | Path | Contents | Status |
 | --- | --- | --- |
 | [`packages/reusable_model`](packages/reusable_model/README.md) | Reusable building blocks: 3D geometry, occupancy grids & distance fields, planar IK, pinhole vision & point clouds, YAML/NPZ IO, IoU multi-object tracking, Modbus gripper, subprocess bridge | ✅ 128 tests |
-| [`projects/`](projects/README.md) | Robot projects (sim, navigation, manipulation) | ⚠️ currently internal only — see [NOTICE](NOTICE) |
+| [`projects/`](projects/README.md) | Robot projects (sim, navigation, manipulation) | ⚠️ **empty** — only the convention doc lives here; the projects are kept in a separate internal repository |
 
-Robot projects are kept internal because they depend on robot-model assets delivered by a hardware
-vendor, whose copyright we do not hold and have no redistribution license for. Rather than upload
-them first and ask later, this repository simply does not contain them — they were removed from both
-the current revision and the Git history. `projects/` is reserved for future projects that are
+> **`projects/` is publicly visible**, like every other file in this repository. GitHub has no
+> per-directory visibility: a public repo exposes all of its contents. Never put anything here that
+> you do not want public — once pushed, it can linger in history and pull-request refs even after
+> deletion.
+
+Robot projects are kept out of this repository because they depend on robot-model assets delivered by
+a hardware vendor, whose copyright we do not hold and have no redistribution license for. Rather than
+upload them first and ask later, this repository simply does not contain them — they were removed from
+both the current revision and the Git history. `projects/` is reserved for future projects that are
 original or explicitly licensed for redistribution.
 
 Only hard dependency is `numpy`; heavy dependencies (OpenCV / pyserial / PyYAML) are imported lazily.

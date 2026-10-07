@@ -47,7 +47,6 @@ RobotForge 是一个**面向机器人二次开发的 monorepo**。它把同一�
 | [`projects/tianyi25-sim`](projects/tianyi25-sim/README.md) | 天轶 2.5 人形机器人（四轮底盘 + 双腿柱 + 双臂 + 3-DoF 头部）的 Gazebo 物理仿真、SLAM 在线建图与 Nav2 迎宾导航 | ROS 2 Jazzy · Gazebo Harmonic | ✅ 可运行 |
 | [`packages/reusable_model`](packages/reusable_model/README.md) | 与具体项目解耦的 Python 构建块：3D 几何、占据栅格与距离场、平面逆运动学、针孔视觉与点云、YAML/NPZ 序列化、IoU 多目标跟踪、Modbus 夹爪、子进程桥接 | Python 3.10+ · numpy | ✅ 128 tests |
 
-**想加新项目？** 见 [docs/adding-a-project.md](docs/adding-a-project.md) —— 接入一个机器人项目只需要 3 步。
 
 ## 🚀 快速开始
 

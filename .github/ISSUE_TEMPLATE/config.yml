@@ -2,8 +2,11 @@ blank_issues_enabled: true
 
 contact_links:
   - name: 📖 文档与快速开始
-    url: https://github.com/CGmoke/robot-forge#-快速开始
+    url: https://github.com/CGmoke/robot-forge
     about: 先看看 README 的快速开始和文档索引，很多问题在里面已有答案
-  - name: 💬 提问与讨论
-    url: https://github.com/CGmoke/robot-forge/discussions
-    about: 不确定是不是 bug、想聊方案、想展示你的用法，来这里
+
+# 说明：Discussions 未启用前不要在这里放 /discussions 链接，否则会 404。
+# 启用后（Settings → General → Features → Discussions 打勾）可加回：
+#   - name: 💬 提问与讨论
+#     url: https://github.com/CGmoke/robot-forge/discussions
+#     about: 不确定是不是 bug、想聊方案、想展示你的用法，来这里

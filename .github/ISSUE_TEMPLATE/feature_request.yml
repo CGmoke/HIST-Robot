@@ -1,0 +1,46 @@
+name: 💡 Feature request
+description: 提出一个新功能或改进建议
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先描述**问题**，再描述**方案**。我们更关心"你被什么卡住了"，而不是"要加哪个函数"。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你想解决什么问题
+      description: 现在做不到什么？在什么场景下会需要它？
+      placeholder: |
+        我在把仿真链路往实机上迁时，需要 xxx，但现在只能手动改配置文件……
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 你期望的方案
+      description: 如果有 API / 命令 / 配置的初步设想，写在这里
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 你考虑过的替代方案
+      description: 现在是怎么绕过去的？
+    validations:
+      required: false
+
+  - type: dropdown
+    id: willingness
+    attributes:
+      label: 你愿意自己实现吗
+      options:
+        - 愿意，我可以提 PR
+        - 愿意，但需要有人指导
+        - 暂时没时间，只是提个建议
+    validations:
+      required: true

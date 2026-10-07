@@ -1,6 +1,6 @@
-# algorithm_template_model
+# reusable_model
 
-从 机器人代码库中抽取出的自包含、可复用 Python 构建块。此处所有内容都与来源项目解耦：不含绝对路径、不读取环境变量、不依赖项目专属配置，也不使用 `print()`（各模块统一通过 `logging.getLogger(__name__)` 记录日志）。
+从机器人项目中抽取出的**自包含、可复用** Python 构建块。此处所有内容都与来源项目解耦：不含绝对路径、不读取环境变量、不依赖项目专属配置，也不使用 `print()`（各模块统一通过 `logging.getLogger(__name__)` 记录日志）。
 
 ## 环境要求
 
@@ -10,15 +10,22 @@
   `minimalmodbus`（hardware 子包）、`PyYAML`（配置文件）。可选模块在使用处
   惰性导入，因此未安装它们时，包内其余部分仍可正常工作。
 
-安装本包（可选择是否附带可选依赖）：
+## 安装与使用
+
+采用标准 **src 布局**：源码在 `src/reusable_model/`，测试在 `tests/`。
 
 ```bash
-cd reusable_model
-python -m pip install -e .            # 仅核心依赖
-python -m pip install -e .[vision,hardware,yaml,test]
+cd packages/reusable_model
+python -m pip install -e .                          # 仅核心依赖
+python -m pip install -e ".[vision,hardware,yaml,test]"   # 含可选依赖
+python -m pytest                                    # 128 个单测
 ```
 
-也可以不安装，直接从本目录使用 —— `reusable_model` 包就位于该文件夹的顶层。
+不安装也可以直接用 —— 把 `src/` 加进 `PYTHONPATH` 即可：
+
+```bash
+PYTHONPATH=src python -c "from reusable_model.geometry.boxes import iou; print(iou([0,0,10,10],[2,2,12,12]))"
+```
 
 ## 模块索引
 
@@ -98,12 +105,12 @@ print(frame[0]["track_id"], iou([0, 0, 10, 10], [2, 2, 12, 12]))
 ## 运行测试
 
 ```bash
-cd reusable_model
+cd packages/reusable_model
 python -m pytest
 ```
 
 每个模块还附带可执行的 doctest：
 
 ```bash
-python -m doctest reusable_model/geometry/boxes.py
+python -m doctest src/reusable_model/geometry/boxes.py
 ```

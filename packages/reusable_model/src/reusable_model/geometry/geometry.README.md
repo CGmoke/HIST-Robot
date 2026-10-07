@@ -1,6 +1,6 @@
 # geometry 子包说明
 
-`reusable_model.geometry` 是从 Hulk/Zev 机器人栈中抽取的纯几何工具子包，提供两组彼此独立、
+`reusable_model.geometry` 是纯几何工具子包，提供两组彼此独立、
 互不耦合的能力：
 
 - **2D 轴对齐边界框**（`boxes.py`）：目标检测后处理、视觉跟踪与掩码工具所需的

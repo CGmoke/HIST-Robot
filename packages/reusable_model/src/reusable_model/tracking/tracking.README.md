@@ -1,6 +1,6 @@
 # tracking 子包说明
 
-`reusable_model.tracking` 是从 Hulk/Zev 机器人栈中抽取的轻量级目标跟踪子包，只用标准库加
+`reusable_model.tracking` 是轻量级目标跟踪子包，只用标准库加
 `numpy`（经由 `reusable_model.geometry.boxes`）实现两件彼此独立的事：
 
 - **IoU 多目标跟踪**（`iou_tracker.py`）：贪心逐帧数据关联，为检测框跨帧分配

@@ -32,11 +32,15 @@ htmlcov/
 *.tmp
 */tmp/*
 *.bak
+*.npy
+pick_garbage/
+
+# --- 媒体资源默认不追踪（体积大），但放行文档里的演示图/GIF ---
 *.jpg
 *.jpeg
 *.png
-*.npy
-pick_garbage/
+!docs/assets/**
+!projects/*/assets/**
 
 # --- Python 打包产物 / 本地配置（template_model 补充）---
 dist/

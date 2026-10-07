@@ -1,0 +1,82 @@
+name: 🐛 Bug report
+description: 报告一个可复现的问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请尽量把信息填全 —— 缺信息的 issue 通常要来回好几轮才能定位。
+        提问前建议先搜一下 [已有 issue](https://github.com/CGmoke/robot-forge/issues?q=is%3Aissue)。
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 涉及哪个部分
+      options:
+        - projects/tianyi25-sim（Gazebo 仿真 / Nav2 / SLAM）
+        - projects/tianyi25-sim（URDF 模型 / RViz 显示）
+        - packages/reusable_model（Python 复用库）
+        - 仓库本身（文档 / CI / 结构）
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 现象
+      description: 实际发生了什么？期望发生什么？
+      placeholder: |
+        期望：ros2 topic hz /scan 输出约 10 Hz
+        实际：一直没有输出，且终端报 xxx
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 从干净环境开始的完整命令，越具体越好
+      render: bash
+      placeholder: |
+        cd projects/tianyi25-sim/ros2_ws
+        colcon build --packages-select tianyi25_urdf tianyi25_sim --symlink-install
+        source install/setup.bash
+        ros2 launch tianyi25_sim gazebo.launch.py
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 报错日志 / 截图
+      description: 完整堆栈或终端输出（不要只贴最后一行）
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      placeholder: Ubuntu 24.04
+    validations:
+      required: true
+
+  - type: input
+    id: ros
+    attributes:
+      label: ROS 2 版本
+      placeholder: Jazzy
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: 你使用的 commit / 版本
+      description: 执行 `git rev-parse --short HEAD` 的结果
+      placeholder: 9f91293
+    validations:
+      required: false

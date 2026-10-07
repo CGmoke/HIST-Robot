@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "reusable_model"
 version = "0.1.0"
-description = "Reusable, self-contained building blocks extracted from the Hulk/Zev robot stacks."
+description = "Reusable, self-contained Python building blocks for robot software: geometry, grid maps, motion, vision, IO, tracking, hardware and runtime."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.23"]
@@ -17,10 +17,10 @@ yaml = ["PyYAML>=5.4"]
 test = ["pytest>=7.0"]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["reusable_model*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = [".."]
+pythonpath = ["src"]
 addopts = "-q"

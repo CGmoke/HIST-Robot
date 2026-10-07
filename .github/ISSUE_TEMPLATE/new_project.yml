@@ -1,0 +1,79 @@
+name: 🤖 New robot project
+description: 提议在仓库里新增一个机器人项目（或一个复用库）
+title: "[Project] "
+labels: ["new-project"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **动手写代码之前先开这个 issue。** 机器人项目往往涉及硬件、模型授权与大量二进制资源，
+        先对齐能省掉很多返工。目录规范见 [docs/adding-a-project.md](https://github.com/CGmoke/robot-forge/blob/main/docs/adding-a-project.md)。
+
+  - type: input
+    id: name
+    attributes:
+      label: 项目 / 库的名字
+      placeholder: 例如 projects/ur5-arm-pick 或 packages/trajectory-opt
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 类型
+      options:
+        - projects/ 下的机器人项目（仿真 / 导航 / 抓取 …）
+        - packages/ 下的跨项目复用库
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: 它是什么，能干什么
+      description: 一段话讲清定位，以及和仓库已有内容的区别
+    validations:
+      required: true
+
+  - type: input
+    id: robot
+    attributes:
+      label: 目标机器人 / 硬件
+      description: 真机型号、仿真平台、或"纯软件不依赖硬件"
+      placeholder: 例如 UR5 + Robotiq 2F-85，或 Isaac Sim
+    validations:
+      required: true
+
+  - type: input
+    id: stack
+    attributes:
+      label: 技术栈与版本
+      placeholder: 例如 ROS 2 Jazzy + Gazebo Harmonic + Python 3.10
+    validations:
+      required: true
+
+  - type: textarea
+    id: assets
+    attributes:
+      label: 第三方资源与许可
+      description: URDF / 网格 / 数据集 / 模型从哪来？许可是什么？能否与 Apache-2.0 共存？
+    validations:
+      required: true
+
+  - type: textarea
+    id: plan
+    attributes:
+      label: 你打算怎么做
+      description: 目录打算怎么放、先做什么、能给出哪些可验证的运行入口
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 确认
+      options:
+        - label: 我已阅读 docs/adding-a-project.md 的接入自检清单
+          required: true
+        - label: 我可以在干净环境里复现这个项目的运行步骤
+          required: true

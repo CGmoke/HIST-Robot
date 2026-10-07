@@ -1,6 +1,6 @@
 # motion 子包说明
 
-`reusable_model.motion` 是从 Hulk / Zev 机器人栈中抽取的运动学规划基础原语子包，与具体项目解耦：不含绝对路径、环境变量与项目专用配置，模块内统一通过 `logging.getLogger(__name__)` 记录日志。子包当前包含两个相互独立的模块：平面逆运动学（planar IK）与制动感知速度曲线（speed profile）。
+`reusable_model.motion` 是运动学规划基础原语子包，与具体项目解耦：不含绝对路径、环境变量与项目专用配置，模块内统一通过 `logging.getLogger(__name__)` 记录日志。子包当前包含两个相互独立的模块：平面逆运动学（planar IK）与制动感知速度曲线（speed profile）。
 
 ## 1. 模块总览
 

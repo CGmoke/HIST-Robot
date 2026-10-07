@@ -93,7 +93,7 @@ robot-forge/
 ├── .github/                   # CI、issue / PR 模板
 ├── docs/
 │   └── adding-a-project.md    # 新项目接入规范 + 知识产权自检
-├── projects/                  # 机器人工程项目（当前为内部项目）
+├── projects/                  # 机器人工程项目（公开目录；当前只有约定说明）
 │   └── README.md              # 目录约定、什么能放 / 什么不能放
 └── packages/                  # 跨项目复用的库
     └── reusable_model/        # src 布局的 Python 包

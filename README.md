@@ -130,7 +130,7 @@ robot-forge/
 │       ├── README.md          # 项目入口：能干什么、怎么跑、坑在哪
 │       └── ros2_ws/           # 该项目自己的 ROS 2 工作空间
 │           └── src/
-│               ├── tianyi25_urdf/   # 纯资源包：URDF + 24 个 STL + RViz
+│               ├── tianyi25_urdf/   # 纯资源包：URDF（图元几何）+ RViz
 │               └── tianyi25_sim/    # 仿真包：世界 + 控制器 + 桥接 + Nav2
 └── packages/                  # 跨项目复用的库
     └── reusable_model/        # src 布局的 Python 包
@@ -160,7 +160,7 @@ robot-forge/
 | [`docs/adding-a-project.md`](docs/adding-a-project.md) | 新增机器人项目的目录规范与自检清单 |
 | [`projects/tianyi25-sim/README.md`](projects/tianyi25-sim/README.md) | 天轶 2.5 仿真项目总览：环境、构建、4 个运行入口、话题与 TF 链、常见问题 |
 | [`projects/tianyi25-sim/ros2_ws/src/tianyi25_sim/README.md`](projects/tianyi25-sim/ros2_ws/src/tianyi25_sim/README.md) | 仿真包细节：物理整定、雷达/四轮几何、Nav2 参数、TF 树、踩坑记录 |
-| [`projects/tianyi25-sim/ros2_ws/src/tianyi25_urdf/README.md`](projects/tianyi25-sim/ros2_ws/src/tianyi25_urdf/README.md) | URDF 模型结构、关节链、网格资源、显示 launch |
+| [`projects/tianyi25-sim/ros2_ws/src/tianyi25_urdf/README.md`](projects/tianyi25-sim/ros2_ws/src/tianyi25_urdf/README.md) | URDF 模型结构、关节链、图元几何与落地间隙、显示 launch |
 | [`packages/reusable_model/README.md`](packages/reusable_model/README.md) | 复用库的模块索引与 API 概览 |
 
 ## 🗺 路线图

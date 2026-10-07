@@ -42,7 +42,7 @@ pick_garbage/
 !docs/assets/**
 !projects/*/assets/**
 
-# --- Python 打包产物 / 本地配置（template_model 补充）---
+# --- Python 打包产物 / 本地配置 ---
 dist/
 *.egg-info/
 .eggs/
@@ -50,3 +50,7 @@ dist/
 .env.*
 *.local
 .DS_Store
+
+# --- 厂商模型资源：未获再分发授权，禁止提交 ---
+# 见 NOTICE。若你已取得厂商书面授权，也请先确认授权范围再放开这一条。
+projects/tianyi25-sim/ros2_ws/src/tianyi25_urdf/meshes/

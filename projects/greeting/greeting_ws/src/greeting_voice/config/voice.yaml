@@ -1,0 +1,40 @@
+# voice_greet_tts_node 参数（B/语音 Owner 维护，规范 §5.4：按 Owner 拆文件）
+# G 左/右拨待命后，按 A/B/C/D 键播报对应文本；文本留空则该组合不启用。
+voice_greet_tts_node:
+  ros__parameters:
+    sbus_topic: /sbus_data/event
+    tts_service: /intelligent_interaction/tts/play
+    # 播报实体：须为 audio_config 中开启 stop 权限的文本型实体，否则急停打断不了
+    audio_id: audio_guide
+    command_topic: /greeting/panel_command
+    text_left_a: "各位领导、各位来宾，各位校友企业家朋友们，大家好！欢迎莅临新乡国际会议中心雷迪森酒店。"
+    text_left_b: "我是本次活动智能迎宾机器人天轶，欢迎来到智汇牧野 与 “新” 同行产业合作对接暨校友企业家创新发展科创盛会。"
+    text_left_c: "本次大会设置两大核心活动板块。第一板块开展产业座谈、前沿科研项目路演、产业投资推介、重点项目集中签约，打通创新链与产业链双向通道；第二板块以 “旗” 聚校友力量，“科” 创产业未来为主题，举办红旗区项目对接暨校友企业家创新发展座谈会，包含企业家科创实践分享、高校科技成果转化发布、政企圆桌研讨、产学研签约、校友企业家联盟轮值主席传递等系列议程，大会主会场位于前方金穗厅。"
+    text_left_d: "请各位来宾移步至签到处完成信息登记，领取会务资料与活动手册。"
+    text_right_a: "本次活动聚合政府、高校科研团队、行业专家、投资机构、校友企业多方资源，以校企协同赋能产业升级，促进高校科研成果落地转化，推动校友经济与地方产业链深度融合。"
+    text_right_b: "请跟随指引前往金穗厅会场共叙情谊、共探机遇、共寻合作，共筑产业新生态，预祝本次活动圆满顺利！"
+    text_right_c: "祝各位来宾此行收获满满，感谢您的到来！"
+    text_right_d: "预留8"
+    service_timeout_s: 5.0
+    dry_run: false
+
+# simple_action_voice_node 参数：平台「简单动作模式」(H 右拨 + 连按 B×N + 短按 A) 的语音。
+# 序号必须与平台 joystick_bridge_node.SIMPLE_ACTION_FILES 一一对应：
+#   1=挥手(0706_hello) 2=击掌(Give_me_fire) 3=碰拳(Fist) 4=敬礼(Salute)
+# 文本留空则该序号只做动作不播报。连按/短按窗口默认与 bridge_config.yaml 一致，勿随意改。
+simple_action_voice_node:
+  ros__parameters:
+    sbus_topic: /sbus_data/event
+    tts_service: /intelligent_interaction/tts/play
+    # 播报实体：须为 audio_config 中开启 stop 权限的文本型实体，否则急停打断不了
+    audio_id: audio_guide
+    command_topic: /greeting/panel_command
+    text_1: "您好呀，很高兴见到您，欢迎您的到来！"
+    text_2: "来，我们击个掌，合作愉快！"
+    text_3: "碰个拳，一起加油！"
+    text_4: "天轶向您敬礼，随时听候您的吩咐！"
+    press_min_interval_s: 0.15
+    press_max_interval_s: 2.0
+    short_press_s: 1.0
+    service_timeout_s: 5.0
+    dry_run: false

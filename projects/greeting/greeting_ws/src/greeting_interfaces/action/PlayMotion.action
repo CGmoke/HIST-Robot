@@ -1,0 +1,11 @@
+# goal
+string motion_name       # salute_bow | wave_official | point_right | point_left
+                         # | farewell_bow | photo_pose | idle_scan
+float32 speed_scale      # ★礼仪动作统一 ≤0.7，避免机械感与幅度过大
+---
+# result
+bool success
+string message
+---
+# feedback
+float32 progress

@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>greeting_teleop</name>
+  <version>0.0.0</version>
+  <description>遥控器(SBUS)按键网关：订阅 /sbus_data/event(bodyctrl_msgs/SbusData)，把命名按键事件映射为迎宾命令，发布到 /greeting/panel_command</description>
+  <maintainer email="3059342114@qq.com">moke</maintainer>
+  <license>Apache-2.0</license>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>bodyctrl_msgs</depend>
+  <depend>launch</depend>
+  <depend>launch_ros</depend>
+  <depend>python3-yaml</depend>
+
+  <!-- panel_command_bridge：调用 PlayMotion 动作；flow_command_bridge：发布 ConsoleCommand -->
+  <exec_depend>greeting_interfaces</exec_depend>
+  <!-- greeting_bringup.launch.py：include greeting_body/motion.launch.py -->
+  <exec_depend>greeting_body</exec_depend>
+  <!-- greeting_bringup.launch.py：include greeting_orchestrator/orchestrator.launch.py -->
+  <exec_depend>greeting_orchestrator</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

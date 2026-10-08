@@ -1,0 +1,7 @@
+string cmd               # start | pause | resume | stop | next | prev | goto | manual
+string arg
+string operator_id
+---
+bool success
+string message
+string current_state     # 返回当前状态与讲稿段号

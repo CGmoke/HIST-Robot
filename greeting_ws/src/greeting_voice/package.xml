@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd"
+             schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>greeting_voice</name>
+  <version>0.1.0</version>
+  <description>天轶 2.5 迎宾语音包：遥控器 G 左/右拨 + A/B/C/D 键触发 TTS 播报</description>
+  <maintainer email="dev@x-humanoid-cloud.com">voice-owner-B</maintainer>
+  <license>Apache-2.0</license>
+
+  <depend>rclpy</depend>
+  <!-- 急停命令 /greeting/panel_command（std_msgs/String） -->
+  <depend>std_msgs</depend>
+  <!-- 迎宾接口包（/greeting/speak 的 Speak.action） -->
+  <depend>greeting_interfaces</depend>
+  <!-- 机器人专属消息包，来自 xos 工作空间（需先 source ~/xos/setup.bash 再编译） -->
+  <depend>bodyctrl_msgs</depend>
+  <depend>interaction_msgs</depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

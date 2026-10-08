@@ -1,0 +1,254 @@
+## 礼仪动作关键帧表 —— 实机 PlayMotion 服务端使用（greeting_body/config/motions.yaml）
+
+
+version: "1.0"
+
+# 中立待机姿态：动作起止位姿，保证动作之间衔接不跳变
+home:
+  waist_yaw_joint:         0.00
+  waist_pitch_joint:       0.00
+  head_yaw_joint:          0.00
+  head_pitch_joint:        0.00
+  head_roll_joint:         0.00
+  shoulder_yaw_l_joint:    0.00
+  shoulder_yaw_r_joint:    0.00
+  elbow_yaw_l_joint:       0.00
+  elbow_yaw_r_joint:       0.00
+  shoulder_pitch_l_joint:  0.00
+  shoulder_pitch_r_joint:  0.00
+  shoulder_roll_l_joint:   0.00
+  shoulder_roll_r_joint:   0.00
+  elbow_pitch_l_joint:     0.00
+  elbow_pitch_r_joint:     0.00
+  wrist_pitch_l_joint:     0.00
+  wrist_pitch_r_joint:     0.00
+  wrist_roll_l_joint:      0.00
+  wrist_roll_r_joint:      0.00
+
+motions:
+
+  #id: 1
+  # 原地抬手迎宾：双臂自中立位【平缓向外轻轻张开】到面板迎宾姿态，停留一拍后再收回中立。
+  #   动作语义：肩前抬(-0.722) + 双肩外展(roll 镜像 ±0.387) + 双肘伸直(-0.001)，
+  #             小臂随之上抬、掌心朝外，是柔和克制的"欢迎/请进"手势；
+  #             全程【原地】：腿不动、腰不转、头正视前方（腰/头面板读数全 0）。
+
+  greet_open_arms:
+    duration: 3.2
+    keyframes:
+      - {t: 0.0, positions: {}}                      # 起点 = /robot_state 实测角
+      - t: 1.3                                       # 向外张开到位（名义 1.3s，配 speed_scale≤0.7 更柔和）
+        positions:
+          waist_pitch_joint:       0.000
+          waist_yaw_joint:         0.000
+          head_yaw_joint:          0.000
+          head_pitch_joint:        0.000
+          head_roll_joint:         0.000
+          shoulder_pitch_l_joint: -0.722
+          shoulder_roll_l_joint:   0.387
+          shoulder_yaw_l_joint:   -0.593
+          elbow_pitch_l_joint:    -0.000
+          elbow_yaw_l_joint:       0.000
+          wrist_pitch_l_joint:     0.000
+          wrist_roll_l_joint:      0.000
+          shoulder_pitch_r_joint: -0.722
+          shoulder_roll_r_joint:  -0.387
+          shoulder_yaw_r_joint:    0.593
+          elbow_pitch_r_joint:    -0.000
+          elbow_yaw_r_joint:       0.000
+          wrist_pitch_r_joint:     0.000
+          wrist_roll_r_joint:      0.000
+      - {t: 2.1}                                     # 保持迎客姿态一拍（不写 positions = 保持上一帧）
+      - {t: 3.2, positions: {}}                      # 收回中立，动作间衔接不跳变
+
+  #id: 2,6
+  # 轻抬引导姿态（配合"缓慢向前小幅移动"的引导桥段）：
+  #   右臂前抬作引导手、左臂自然垂放、头随引导方向微偏 —— 是"请随我来/这边请"的随身引导姿态。
+  guide_pose:
+    duration: 5.6
+    keyframes:
+      - {t: 0.0, positions: {}}                      # 起点 = /robot_state 实测角
+      - t: 1.4                                       # 摆到引导姿态（名义 1.4s，配 speed_scale≤0.7 更缓）
+        positions:
+          waist_pitch_joint:       0.000
+          waist_yaw_joint:        -0.180
+          head_yaw_joint:         -0.300
+          head_pitch_joint:        0.045
+          head_roll_joint:         0.000
+          shoulder_pitch_r_joint: -1.100
+          shoulder_roll_r_joint:  -0.300
+          shoulder_yaw_r_joint:    0.120
+          elbow_pitch_r_joint:    -0.450
+          elbow_yaw_r_joint:       0.180
+          wrist_pitch_r_joint:     0.180
+          wrist_roll_r_joint:      0.080
+          shoulder_pitch_l_joint: -0.060
+          shoulder_roll_l_joint:   0.060
+          shoulder_yaw_l_joint:    0.000
+          elbow_pitch_l_joint:    -0.180
+          elbow_yaw_l_joint:       0.000
+          wrist_pitch_l_joint:     0.000
+          wrist_roll_l_joint:      0.000
+      - {t: 4.2}                                     # 保持引导姿态一拍（不写 positions = 保持上一帧）
+      - {t: 5.6, positions: {}}                      # 收回中立（若与移动重叠，需编排层并行/延长保持）
+
+
+  #id: 3
+  # 水平侧指指引（右臂平缓水平侧指、指向金穗厅会场方向，指引保持约 3 s，幅度柔和）：
+  #   语义：右臂自中立位抬到【与肩同高的水平侧举】、肘微屈(≈18°)、手掌微翘；
+  #         腰与头同向转向所指方向；左臂自然垂放；两腿不动（原地）。
+  point_side_right:
+    duration: 4.9
+    keyframes:
+      - {t: 0.0, positions: {}}                      # 起点 = /robot_state 实测角
+      - t: 1.4                                       # 平缓抬到水平侧指（名义 1.4s；峰值 roll 速度≈1.1 rad/s）
+        positions:
+          waist_pitch_joint:       0.000
+          waist_yaw_joint:        -0.250
+          head_yaw_joint:         -0.500
+          head_pitch_joint:        0.030
+          head_roll_joint:         0.000
+          shoulder_pitch_r_joint: -0.200
+          shoulder_roll_r_joint:  -1.480
+          shoulder_yaw_r_joint:    0.000
+          elbow_pitch_r_joint:    -0.450
+          elbow_yaw_r_joint:       0.000
+          wrist_pitch_r_joint:     0.200
+          wrist_roll_r_joint:      0.000
+          shoulder_pitch_l_joint: -0.020
+          shoulder_roll_l_joint:   0.020
+          shoulder_yaw_l_joint:    0.000
+          elbow_pitch_l_joint:    -0.060
+          elbow_yaw_l_joint:       0.000
+          wrist_pitch_l_joint:     0.000
+          wrist_roll_l_joint:      0.000
+      - {t: 3.5}                                     # 保持指引 2.1s(名义) = 实机 3.0s @ speed_scale 0.7
+      - {t: 4.9, positions: {}}                      # 收回中立，动作间衔接不跳变
+  
+  
+  #id: 4
+  # 左臂水平前指（第 4 段"签到指引"用）：左臂抬到水平前举、肘微屈(≈18°)、手掌微翘。
+
+  point_left:
+    duration: 5.6
+    keyframes:
+      - {t: 0.0, positions: {}}
+      - t: 1.4
+        positions:
+          shoulder_pitch_l_joint: -1.280
+          shoulder_roll_l_joint:   0.35
+          elbow_pitch_l_joint:    -0.450
+          wrist_pitch_l_joint:     0.200
+          head_yaw_joint:          0.45
+          waist_yaw_joint:         0.25
+      - {t: 4.2}                    # 保持指引姿态
+      - {t: 5.6, positions: {}}
+  
+  #id: 5
+  # 讲解式摊掌介绍（第 5 段"回转身体、重新面向来宾"作介绍用）：
+  #   语义：腰/头【回正】正视来宾；**右臂向侧前方伸出、掌心向上摊开**（讲解员
+  #         "请看/我给大家介绍"的经典呈献手势），左臂自然垂放、肘微屈不僵直。
+  #         🔴 核心是【单臂、不对称、幅度克制】——真人讲解员从不双臂对称大张。
+
+  welcome_present:
+    duration: 5.6
+    keyframes:
+      - {t: 0.0, positions: {}}                      # 起点 = /robot_state 实测角
+      - t: 1.6                                       # 右臂缓缓伸出、摊掌到位
+        positions:
+          waist_pitch_joint:       0.000
+          waist_yaw_joint:         0.000             # 回正，正视来宾
+          head_yaw_joint:          0.000
+          head_pitch_joint:        0.030
+          head_roll_joint:         0.000
+          shoulder_pitch_r_joint: -0.900             # 右臂抬到胸腹高度、向体前伸出
+          shoulder_roll_r_joint:  -0.450             # 向右侧外展约 26°，成"侧前 41°"方向
+          shoulder_yaw_r_joint:    0.150             # 小臂略内扣，掌心朝向宾客
+          elbow_pitch_r_joint:    -0.550             # 肘屈 ≈24°，自然弧度
+          elbow_yaw_r_joint:       0.000
+          wrist_pitch_r_joint:     0.250             # 手腕上摊，呈"掌心向上"的呈献感
+          wrist_roll_r_joint:      0.100
+          shoulder_pitch_l_joint: -0.120             # 左臂自然垂放
+          shoulder_roll_l_joint:   0.100             # 微微外让 6°，避免贴住躯干
+          shoulder_yaw_l_joint:    0.000
+          elbow_pitch_l_joint:    -0.450             # 肘微屈 ≈18°，不僵直
+          elbow_yaw_l_joint:       0.000
+          wrist_pitch_l_joint:     0.000
+          wrist_roll_l_joint:      0.000
+      - {t: 4.0}                                     # 保持介绍姿态 2.4s(名义)
+      - {t: 5.6, positions: {}}                      # 收回中立，动作间衔接不跳变
+  
+  #id: 7
+  # 轻缓致意礼（双手机械臂微微躬身下压，致谢用）：
+  #   语义：正身【微微】前倾 + 双臂收拢前下压（双手在身前向下的致意/致谢姿态），
+  #         抬头补偿让视线仍朝着来宾；两腿不动（原地）。
+
+  gentle_bow:
+    duration: 4.4
+    keyframes:
+      - {t: 0.0, positions: {}}                      # 起点 = /robot_state 实测角
+      - t: 1.6                                       # 轻缓躬下（名义 1.6s）
+        positions:
+          waist_pitch_joint:       0.320
+          waist_yaw_joint:         0.000
+          head_pitch_joint:       -0.150
+          head_yaw_joint:          0.000
+          head_roll_joint:         0.000
+          shoulder_pitch_l_joint: -0.180
+          shoulder_pitch_r_joint: -0.180
+          shoulder_roll_l_joint:   0.280
+          shoulder_roll_r_joint:  -0.280
+          shoulder_yaw_l_joint:    0.000
+          shoulder_yaw_r_joint:    0.000
+          elbow_pitch_l_joint:    -0.500
+          elbow_pitch_r_joint:    -0.500
+          elbow_yaw_l_joint:       0.000
+          elbow_yaw_r_joint:       0.000
+          wrist_pitch_l_joint:     0.000
+          wrist_pitch_r_joint:     0.000
+          wrist_roll_l_joint:      0.000
+          wrist_roll_r_joint:      0.000
+      - {t: 5.0}                                     # 保持致意姿态(名义 2.4s)
+      - {t: 6.4, positions: {}}                      # 缓缓起身回中立
+
+
+  # 右手指引：右臂前伸指向右侧，头/腰同向
+  point_right:
+    duration: 5.6
+    keyframes:
+      - {t: 0.0, positions: {}}
+      - t: 1.4
+        positions:
+          shoulder_pitch_r_joint:  0.85
+          shoulder_roll_r_joint:  -0.25
+          elbow_pitch_r_joint:    -0.20
+          wrist_pitch_r_joint:     0.30
+          head_yaw_joint:         -0.45
+          waist_yaw_joint:        -0.25
+      - {t: 4.2}                    # 保持指引姿态
+      - {t: 5.6, positions: {}}
+
+
+  #id: 8 ：供 motion_server 待机扫视直连循环使用。
+
+  idle_scan_loop:
+    duration: 6.0
+    keyframes:
+      - {t: 0.0, positions: {head_yaw_joint:  0.00, head_pitch_joint: 0.00, waist_yaw_joint:  0.00}}
+      - {t: 1.5, positions: {head_yaw_joint:  0.55, head_pitch_joint: 0.08, waist_yaw_joint:  0.18}}
+      - {t: 3.0, positions: {head_yaw_joint:  0.00, head_pitch_joint: 0.06, waist_yaw_joint:  0.00}}
+      - {t: 4.5, positions: {head_yaw_joint: -0.55, head_pitch_joint: 0.08, waist_yaw_joint: -0.18}}
+      - {t: 6.0, positions: {head_yaw_joint:  0.00, head_pitch_joint: 0.00, waist_yaw_joint:  0.00}}
+
+
+ 
+
+  
+
+  
+
+  
+
+
+
+ 

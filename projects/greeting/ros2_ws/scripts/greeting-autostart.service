@@ -1,0 +1,28 @@
+[Unit]
+Description=Greeting Motion Autostart (greeting_body motion_server + greeting_teleop joy_mapper + panel_command_bridge)
+Documentation=file:///home/nvidia/greeting-body-motion/greeting_ws/src/greeting_teleop/README.md
+# 平台进程管理器先起（xsys / joystick / power_board / robot_control 由其托管），
+# 保证 /sbus_data/event 有数据、控制通道在 A 键自检后使能。
+After=network-online.target proc_manager.service
+Wants=network-online.target proc_manager.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# 与平台进程（proc_manager/robot_control 等均以 root 运行）保持一致的用户，
+# 规避 FastDDS 共享内存( SHM )跨用户权限导致的 DDS 发现问题。
+# 如需改为普通用户：User=nvidia，并先验证跨用户 DDS 互通（见 README 第 12 节）。
+User=root
+Environment=GREETING_WS=/home/nvidia/greeting-body-motion/greeting_ws
+Environment=GREETING_SPEED_LIMIT=0.7
+Environment=GREETING_ARM_CURRENT=5.0
+Environment=GREETING_BRIDGE_SPEED_SCALE=0.5
+Environment=HOME=/root
+ExecStart=/bin/bash /home/nvidia/greeting-body-motion/greeting_ws/scripts/greeting_autostart.sh
+Restart=always
+RestartSec=3
+# 与平台同属 xos.slice，便于统一生命周期管理
+Slice=xos.slice
+
+[Install]
+WantedBy=multi-user.target

@@ -4,6 +4,8 @@
 
 **机器人软件的可复用构建块** —— 与具体机器人解耦、拿来即用的 Python 算法库。
 
+**如果对你有帮助，请给颗小星星吧。**
+
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg)](https://www.python.org/)
 [![tests](https://img.shields.io/badge/tests-128%20passed-brightgreen.svg)](packages/reusable_model/tests)

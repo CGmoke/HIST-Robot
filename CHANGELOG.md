@@ -30,16 +30,14 @@
   `reusable_model`，导致 12 个测试模块全部 collection error、`pip install -e .` 找不到包。
   现在 **128 个测试全部通过**，setuptools 可正确发现 9 个包。
 
-## [0.1.0] - 2026-10-01
+## [0.1.0] - 2026-10-08
 
 
 
 ### 新增
 
-- 天轶 2.5 人形机器人 URDF 模型与 25 个 STL 网格资源包 `tianyi25_urdf`
-- Gazebo Harmonic 仿真包 `tianyi25_sim`：世界文件、四轮底盘、2D 雷达、关节轨迹控制器、
-  ROS↔Gazebo 桥接、关节扫掠节点、里程计 TF 节点
-- SLAM Toolbox 在线建图与 Nav2 导航链路
+- 天轶 2.5 人形机器人迎宾项目程序
+
 - 可复用 Python 构建块库（几何 / 栅格 / 运动 / 视觉 / IO / 跟踪 / 硬件 / 运行时）
 - Apache-2.0 许可证
 
